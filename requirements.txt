@@ -1,0 +1,28 @@
+
+# Core
+pandas>=2.0
+numpy>=1.25
+lxml>=4.9
+
+# Azure OpenAI client (via OpenAI SDK)
+openai>=1.13
+
+# Load secrets from .env
+python-dotenv>=1.0
+
+
+quarto
+ipywidgets
+jupyter
+
+matplotlib>=3.7
+plotly 
+networkx
+seaborn
+networkx
+
+scikit-learn
+scipy
+statsmodels 
+
+

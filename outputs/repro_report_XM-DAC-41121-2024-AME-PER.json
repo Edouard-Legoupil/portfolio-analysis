@@ -1,0 +1,51 @@
+{
+  "activity_id": "XM-DAC-41121-2024-AME-PER",
+  "params": {
+    "MONTHS": 12,
+    "HOUSEHOLDS": 10000,
+    "USE_LLM": true,
+    "BASE_SEED": 7,
+    "N_RUNS": 20,
+    "DEA_VRS": true
+  },
+  "run_seeds": [
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26
+  ],
+  "timestamp": "2026-03-03T18:27:35.851786",
+  "budget_min": {
+    "grid": [
+      1.0,
+      0.9,
+      0.85,
+      0.8,
+      0.75,
+      0.7,
+      0.65,
+      0.6,
+      0.55,
+      0.5
+    ],
+    "b_star": 0.456,
+    "iters_grid": 50,
+    "iters_bisect": 60
+  }
+}
