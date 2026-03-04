@@ -68,25 +68,27 @@ This is done across 16 main areas of work. The map below shows how spending on a
 import networkx as nx
 import matplotlib.pyplot as plt
 
-# Create directed graph
+# 1. Start by creating an empty "map" or graph where we will place our nodes and links.
 G = nx.DiGraph()
 
-# Outcome nodes
+# 2. Define the 'Outcome Areas'—these are the 16 types of programs UNHCR funds.
 outcomes = [
     "OA1-Access", "OA2-Status", "OA3-Stateless", "OA4-Gender", "OA5-Child",
     "OA6-Safety", "OA7-Community", "OA8-Basic", "OA9-Housing", "OA10-Health",
     "OA11-Education", "OA12-WASH", "OA13-Well-being", "OA14-16-Solutions"
 ]
 
-# Effect nodes
+# 3. Define the 'Effects'—these are the 6 key ways we measure improvement in people's lives.
 effects = [
     "protection_risk", "vulnerability", "service_efficiency",
     "basic_needs_gap", "morbidity", "education_access"
 ]
 
+# 4. Add these categories to our graph so the computer knows they exist.
 G.add_nodes_from(outcomes + effects)
 
-# Regular causal edges (solid)
+# 5. Define the "Primary Links": how spending in one program area is expected to change an effect.
+# For example, spending on "Education" (OA11) should "increase" "education_access".
 edges = [
     ("OA1-Access", "protection_risk", "decrease"),
     ("OA1-Access", "vulnerability", "decrease"),
@@ -109,32 +111,25 @@ edges = [
     ("OA12-WASH", "service_efficiency", "increase"),
     ("OA13-Well-being", "vulnerability", "decrease"),
     ("OA14-16-Solutions", "vulnerability", "decrease"),
-
-    # New link requested
     ("OA14-16-Solutions", "protection_risk", "decrease")
 ]
 
+# 6. Tell the graph to draw arrows for all these primary links.
 G.add_edges_from([(u, v) for u, v, _ in edges])
 
-# --------------------------------------
-# COLLINEARITY EDGES (curved + dotted)
-# --------------------------------------
+# 7. Define "Secondary Links" (Collinearity): how these effects naturally pull on each other.
+# For example, if sickness (morbidity) goes down, the basic needs gap usually improves too.
 collinearity_edges = [
     ("protection_risk", "vulnerability"),
     ("basic_needs_gap", "morbidity"),
     ("service_efficiency", "education_access"),
-
-    # New relation requested
     ("basic_needs_gap", "vulnerability")
 ]
 
-# --------------------------------------
-# FIXED POSITIONS
-# --------------------------------------
-
+# 8. Set the layout: Programs on the left, Goals/Effects on the right.
 pos = {}
 
-# LEFT: Outcomes (staggered)
+# Layout for the left side (Outcomes)
 x_left = -1
 x_left_2 = -1.25
 y_start = 1
@@ -145,7 +140,7 @@ for i, node in enumerate(outcomes):
     y = y_start + step * i
     pos[node] = (x, y)
 
-# RIGHT: Effects (staggered)
+# Layout for the right side (Effects)
 x_right = 1.2
 x_right_2 = 1.45
 y_effects_start = 0.6
@@ -156,13 +151,10 @@ for i, node in enumerate(effects):
     y = y_effects_start + effect_step * i
     pos[node] = (x, y)
 
-# --------------------------------------
-# PLOT
-# --------------------------------------
-
+# 9. Actually draw the diagram with specific colors and shapes.
 plt.figure(figsize=(8, 10))
 
-# Outcome nodes
+# Outcomes are green circles.
 nx.draw_networkx_nodes(
     G, pos,
     nodelist=outcomes,
@@ -171,7 +163,7 @@ nx.draw_networkx_nodes(
     alpha=0.9
 )
 
-# Effect nodes (square shape)
+# Effects are blue squares.
 nx.draw_networkx_nodes(
     G, pos,
     nodelist=effects,
@@ -181,10 +173,10 @@ nx.draw_networkx_nodes(
     alpha=0.85
 )
 
-# Labels
+# Add the labels.
 nx.draw_networkx_labels(G, pos, font_size=9)
 
-# Solid causal edges
+# Draw the arrows: Blue means something increases, Red means it decreases.
 for u, v, t in edges:
     color = "blue" if t == "increase" else "red"
     nx.draw_networkx_edges(
@@ -197,7 +189,7 @@ for u, v, t in edges:
         connectionstyle="arc3,rad=0.2"
     )
 
-# Curved dotted collinearity edges
+# Draw dotted gray lines for the secondary "spill-over" links.
 for u, v in collinearity_edges:
     nx.draw_networkx_edges(
         G, pos,
@@ -209,7 +201,7 @@ for u, v in collinearity_edges:
         connectionstyle="arc3,rad=0.25"
     )
 
-# Legend
+# 10. Add a legend so the reader knows what the colors and shapes mean.
 from matplotlib.patches import Patch
 legend_elements = [
     Patch(facecolor='lightgreen', label='Outcome Areas'),
@@ -221,6 +213,7 @@ legend_elements = [
 
 plt.legend(handles=legend_elements, loc='upper right')
 
+# Final adjustments to make it look clean.
 plt.axis('off')
 plt.tight_layout()
 plt.show()
@@ -243,6 +236,8 @@ UNHCR as part of its commitment to transparency, makes available extensive infor
 #| label: import
 #| tags: [parameters]
 #| output: true
+
+# 1. Load the necessary tools (libraries) for data processing and visualization.
 import os, re, json, math, random, textwrap, logging
 from collections import defaultdict
 import numpy as np
@@ -250,23 +245,28 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import networkx as nx
 from IPython.display import display, HTML
+
+# Set the visual style for all our charts.
 plt.style.use('seaborn-v0_8')
 plt.rcParams.update({'figure.figsize':(7,5),'axes.titlesize':12,'axes.labelsize':11,'legend.fontsize':10})
 
+# Set up a logger to keep track of what the computer is doing.
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
+# Try to load secret environment variables (like API keys) if they exist.
 try:
     from dotenv import load_dotenv
     load_dotenv('.env')
 except Exception:
     pass
 
-#-----------------------------# 
-## Retrive notebook parameters 
+# 2. Retrieve the settings for this specific simulation (the "Parameters").
 try:
     PARAMS = params
 except NameError:
     PARAMS = {}
+
+# We set defaults for things like which operation we are looking at and how many people to simulate.
 ACTIVITY_ID = PARAMS.get('activity_id', "XM-DAC-41121-2024-AME-PER") 
 MONTHS = int(PARAMS.get('months', 12))
 HOUSEHOLDS = int(PARAMS.get('households', 10000))
@@ -275,7 +275,7 @@ BASE_SEED = int(PARAMS.get('seed', 7))
 N_RUNS = int(PARAMS.get('n_runs', 20))
 DEA_VRS = bool(PARAMS.get('dea_vrs', 'true').__str__().lower() in ['1','true','yes'])
 
-# Collinearity parameters
+# We also set parameters for how different effects "leak" into each other (collinearity).
 COLLINEARITY_PR_VUL = float(PARAMS.get('col_pr_vul', 0.2)) # protection_risk -> vulnerability
 COLLINEARITY_VUL_PR = float(PARAMS.get('col_vul_pr', 0.2)) # vulnerability -> protection_risk
 COLLINEARITY_BNG_MOR = float(PARAMS.get('col_bng_mor', 0.2)) # basic_needs_gap -> morbidity
@@ -285,37 +285,15 @@ COLLINEARITY_EA_SE = float(PARAMS.get('col_ea_se', 0.2)) # education_access -> s
 COLLINEARITY_BNG_VUL = float(PARAMS.get('col_bng_vul', 0.2)) # basic_needs_gap -> vulnerability
 COLLINEARITY_VUL_BNG = float(PARAMS.get('col_vul_bng', 0.2)) # vulnerability -> basic_needs_gap
 
-# Helper for applying effects, considering increase/decrease dynamics
-def apply_effect_to_household_var(hh_instance, target_var_name, adjustment_value, indices_to_apply):
-    """
-    Applies an adjustment to a specific household variable for a given set of indices.
-    The adjustment logic depends on whether increasing the variable is 'good' or 'bad'.
-    """
-    target_array = getattr(hh_instance, target_var_name)
-
-    if target_var_name in ['education_access', 'service_efficiency']:
-        # For variables where higher is better (e.g., access, efficiency),
-        # a positive adjustment moves it towards 1 (full access/efficiency).
-        # We apply a fraction of the remaining gap (1 - current_value).
-        new_val = target_array[indices_to_apply] + adjustment_value * (1.0 - target_array[indices_to_apply])
-    else:
-        # For variables where lower is better (e.g., vulnerability, risk, gap, morbidity),
-        # a positive adjustment (meaning improvement, so reduction in the metric)
-        # moves it towards 0. We apply a fraction of the current value.
-        new_val = target_array[indices_to_apply] + adjustment_value * target_array[indices_to_apply]
-
-    target_array[indices_to_apply] = np.clip(new_val, 0, 1)
-
-#-----------------------------# 
-
-
+# 3. Locate and check the raw data file (the public IATI record).
 xml_path = 'unhcr-activities-2024.xml'
 assert os.path.exists(xml_path), 'Place unhcr-activities-2024.xml alongside this .qmd'
 
+# Set up the random number generator so our results are consistent and reproducible.
 from numpy.random import SeedSequence, default_rng
 ss_root = SeedSequence(BASE_SEED)
 
-# helpers
+# Define simple helper functions to clean up text and numbers from the raw data.
 def get_text(e, default=None):
     return e.text.strip() if (e is not None and e.text) else default
 
@@ -326,21 +304,26 @@ def safe_float(x, default=None):
     except Exception:
         return default
 
+# 4. Open and parse the massive XML data file.
 import xml.etree.ElementTree as ET
 root = ET.parse(xml_path).getroot()
 
+# Create empty lists to store the different pieces of information we find.
 activities, sectors, transactions, budgets = [], [], [], []
 indicators_rows = []
 
+# Loop through every project (activity) in the file and pull out relevant details.
 for act in root.findall('.//iati-activity'):
     aid = get_text(act.find('iati-identifier'))
     title = get_text(act.find('title/narrative'))
     status = (act.find('activity-status').get('code') if act.find('activity-status') is not None else None)
 
+    # Extract information about which sectors (Outcome Areas) are involved.
     for s in act.findall('sector'):
         sectors.append({'activity_id': aid,'vocabulary': s.get('vocabulary'),'code': s.get('code'),
                         'percentage': safe_float(s.get('percentage'), 0.0),'label': get_text(s.find('narrative'))})
 
+    # Extract the planned budget for each project.
     for b in act.findall('budget'):
         v = b.find('value')
         budgets.append({'activity_id': aid,'type': b.get('type'),'status': b.get('status'),
@@ -349,6 +332,7 @@ for act in root.findall('.//iati-activity'):
                         'currency': v.get('currency') if v is not None else None,
                         'value': safe_float(v.text if v is not None else None, 0.0)})
 
+    # Extract every financial transaction (how much was actually spent).
     for tr in act.findall('transaction'):
         val = tr.find('value')
         usd = get_text(tr.find('{http://reporting.unhcr.org/}value-USD'))
@@ -358,6 +342,7 @@ for act in root.findall('.//iati-activity'):
                              'currency': val.get('currency') if val is not None else None,
                              'value_usd': safe_float(usd,0.0),'provider': get_text(tr.find('provider-org/narrative'))})
 
+    # Extract the outcome indicators (the targets and actual results).
     for res in act.findall('result'):
         r_title = get_text(res.find('title/narrative'))
         r_type = res.get('type')
@@ -383,6 +368,7 @@ for act in root.findall('.//iati-activity'):
                                         'actual': safe_float(a.get('value')) if a is not None else None,
                                         'period_start':p_start,'period_end':p_end})
 
+# 5. Convert all these lists into clean, searchable tables (DataFrames).
 activities_df = pd.DataFrame([{'activity_id': get_text(act.find('iati-identifier')),
                                'title': get_text(act.find('title/narrative')),
                                'status': (act.find('activity-status').get('code') if act.find('activity-status') is not None else None)}
@@ -392,16 +378,19 @@ transactions_df = pd.DataFrame(transactions)
 budgets_df = pd.DataFrame(budgets)
 indicators_df = pd.DataFrame(indicators_rows)
 
+# 6. Filter the data to focus ONLY on the specific country/activity we selected at the start.
 if ACTIVITY_ID is None:
     ACTIVITY_ID = activities_df['activity_id'].iloc[0]
 assert ACTIVITY_ID in set(activities_df['activity_id']), 'activity_id not found'
 
 sel_act = activities_df[activities_df['activity_id']==ACTIVITY_ID].iloc[0]
 
+# Split the data into different categories (Impact Areas, Outcome Areas, and Indicators).
 sel_ia = sectors_df[(sectors_df['activity_id']==ACTIVITY_ID) & (sectors_df['vocabulary']=='99') & (sectors_df['code'].str.startswith('IA', na=False))].copy()
 sel_oa = sectors_df[(sectors_df['activity_id']==ACTIVITY_ID) & (sectors_df['vocabulary']=='98') & (sectors_df['code'].str.startswith('OA', na=False))].copy()
 sel_inds = indicators_df[indicators_df['activity_id']==ACTIVITY_ID].copy()
 
+# 7. Calculate the total budget and actual expenditure reported for this project.
 sel_bud = budgets_df[budgets_df['activity_id']==ACTIVITY_ID].copy()
 if not sel_bud.empty:
     currs = set(sel_bud['currency'].dropna().unique().tolist())
@@ -422,7 +411,7 @@ print(f"Expenditure total: ${expenditure_total_usd:,.2f}")
 
 ---
 
-### Step 2: Learning from Past Success
+## Step 2: Learning from Past Success
 
 >  Here we figure out how powerful each type of outcome spending is. If spending on "Education" historically hits all its targets, we give it a high score. We use these scores to predict how much a future project will support our digital households.
 
@@ -437,6 +426,8 @@ print(f"Expenditure total: ${expenditure_total_usd:,.2f}")
 ```{python}
 #| label: oa
 #| output: true
+
+# 1. Define human-readable labels for the 16 Outcome Areas (OA) used by UNHCR.
 OA_FULL_LABELS = {
     'OA1': 'OA1. Access to Territory, Registration and Documentation',
     'OA2': 'OA2. Status Determination',
@@ -456,56 +447,180 @@ OA_FULL_LABELS = {
     'OA16': 'OA16. Local Integration and other Local Solutions',
 }
 
+# 2. Map these labels to the specific data we extracted earlier.
 SRF_MAP = {}
 for _, r in sel_ia.iterrows():
-    SRF_MAP[r['code']] = {'domain': r['label'], 'level': 'IA', 'percentage': float(r['percentage'] or 0.0)}
+    SRF_MAP[r['code']] = {
+        'domain': r['label'],
+        'level': 'IA',
+        'percentage': float(r['percentage'] or 0.0)
+    }
 for _, r in sel_oa.iterrows():
     label = OA_FULL_LABELS.get(r['code'], r['label'])
-    SRF_MAP[r['code']] = {'domain': label, 'level': 'OA', 'percentage': float(r['percentage'] or 0.0)}
+    SRF_MAP[r['code']] = {
+        'domain': label,
+        'level': 'OA',
+        'percentage': float(r['percentage'] or 0.0)
+    }
 
-# Strict improvement
+# 3. Use "Bayesian Estimation" to figure out how successful each program area is.
+# This is a fancy way of saying we look at the results and filter out "noise" or lucky guesses.
+import pymc as pm
+import numpy as np
+import pandas as pd
+import pytensor.tensor as pt
 
-def improvement(row):
-    b, a, t = row.get('baseline'), row.get('actual'), row.get('target')
-    if a is None or b is None or t is None:
+# Clean the data: only look at indicators where we have baseline, actual, and target numbers.
+df_imp = sel_inds.dropna(subset=['baseline', 'actual', 'target']).copy()
+
+# Calculate the "Raw Improvement" (how close we got to the target).
+df_imp["raw_improve"] = (df_imp["actual"] - df_imp["baseline"]) / \
+                        (df_imp["target"] - df_imp["baseline"])
+df_imp["raw_improve"] = df_imp["raw_improve"].clip(-1, 1)
+
+# Categorize the data by program area.
+codes = df_imp["result_code"].astype("category").cat
+code_idx = codes.codes.values
+n_codes = len(codes.categories)
+
+# Build a statistical model that estimates the "true" success rate of each program area.
+with pm.Model() as m:
+    
+    # Estimate the global average improvement across all programs.
+    mu_global = pm.Normal("mu_global", mu=0.0, sigma=0.3)
+
+    # Estimate how much each specific program (OA) typically differs from that average.
+    sigma_oa = pm.Exponential("sigma_oa", 10)
+    oa_effect = pm.Normal("oa_effect",
+                          mu=mu_global,
+                          sigma=sigma_oa,
+                          shape=n_codes)
+
+    # Account for the random noise found in individual indicators.
+    sigma_obs = pm.Exponential("sigma_obs", 20)
+
+    # Tell the model to learn from the actual improvements we observed.
+    obs = pm.Normal(
+        "obs",
+        mu = oa_effect[code_idx],
+        sigma = sigma_obs,
+        observed = df_imp["raw_improve"].values
+    )
+
+    # Run the "Sampling" process (the computer runs thousands of tests to find the best fit).
+    idata = pm.sample(
+        draws=800,
+        tune=1200,
+        chains=2,
+        target_accept=0.9,
+        progressbar=False
+    )
+
+# Extract the final "Success Scores" for each program area.
+posterior_means = idata.posterior["oa_effect"].mean(
+    dim=("chain", "draw")
+).values
+
+# Store these scores in a dictionary for the simulation to use.
+code_imp = dict(zip(codes.categories, posterior_means))
+
+# 4. Map the programs to the specific household goals they improve.
+# This is a "Hybrid" mapping: part expert knowledge, part data-driven correlation.
+
+# Expert Mapping: Which programs SHOULD influence which goals?
+EXP_OA_TO_VARS = {
+    'OA1': ['protection_risk','vulnerability'],
+    'OA2': ['protection_risk','vulnerability'],
+    'OA3': ['protection_risk','vulnerability'],
+    'OA4': ['protection_risk','vulnerability'],
+    'OA5': ['protection_risk','vulnerability'],
+    'OA6': ['protection_risk'],
+    'OA7': ['service_efficiency','vulnerability'],
+    'OA8': ['basic_needs_gap'],
+    'OA9': ['basic_needs_gap'],
+    'OA10':['morbidity'],
+    'OA11':['education_access'],
+    'OA12':['basic_needs_gap','service_efficiency'],
+    'OA13':['vulnerability'],
+    'OA14':['vulnerability','protection_risk'],
+    'OA15':['vulnerability','protection_risk'],
+    'OA16':['vulnerability','protection_risk'],
+}
+
+EXP_IA_TO_VARS = {
+    'IA1':['protection_risk','vulnerability'],
+    'IA2':['basic_needs_gap','morbidity','education_access','vulnerability'],
+    'IA3':['vulnerability','education_access','service_efficiency'],
+    'IA4':['vulnerability'],
+}
+
+# Data-driven part: check how strongly the numbers in our data actually correlate.
+corr_scores = {}
+for c in df_imp["result_code"].unique():
+    subset = df_imp[df_imp["result_code"] == c]
+    if len(subset) < 3:
+        corr_scores[c] = 0
+        continue
+    numeric = subset[["baseline","actual","target"]].corr().abs()
+    score = float(numeric.mean().mean())
+    corr_scores[c] = score if not pd.isna(score) else 0.0
+
+max_corr = max(corr_scores.values()) if corr_scores else 1
+norm_corr = {c: corr_scores[c]/max_corr for c in corr_scores}
+
+# Combine the Expert and Data-driven parts (60% expert weight).
+alpha = 0.6
+
+OA_TO_VARS = {}
+for code, vars_ in EXP_OA_TO_VARS.items():
+    data_strength = norm_corr.get(code, 0)
+    if pd.isna(data_strength): data_strength = 0.0
+    OA_TO_VARS[code] = {
+        v: alpha*1.0 + (1-alpha)*data_strength
+        for v in vars_
+    }
+
+IA_TO_VARS = {}
+for code, vars_ in EXP_IA_TO_VARS.items():
+    data_strength = norm_corr.get(code, 0)
+    if pd.isna(data_strength): data_strength = 0.0
+    IA_TO_VARS[code] = {
+        v: alpha*1.0 + (1-alpha)*data_strength
+        for v in vars_
+    }
+
+# 5. Define a "Non-Linear" scale for how success turns into real-world change.
+# This means that the first few dollars spent have a big impact, but it gets harder to improve further.
+INCREASING_VARS = {'education_access', 'service_efficiency'}
+ELASTICITY_BETA = 0.15       # Controls the intensity of the effect.
+MAX_ABS_EFFECT  = 0.20       # A safety cap to keep the simulation realistic.
+
+def nonlinear_effect(imp, beta=ELASTICITY_BETA):
+    if imp is None or np.isnan(imp):
         return 0.0
-    scale = max(abs(t - b), 1.0)
-    return float(np.clip((a - b) / scale, -1.0, 1.0))
+    imp = float(np.clip(imp, -1.0, 1.0))
+    # Use a logarithmic curve to represent diminishing returns.
+    return float(np.sign(imp) * np.log1p(abs(imp)) * beta)
 
-sel_inds['improve'] = sel_inds.apply(improvement, axis=1) if not sel_inds.empty else []
-sel_inds_actual = sel_inds[sel_inds['actual'].notna() & sel_inds['target'].notna()] if not sel_inds.empty else sel_inds
-code_imp = sel_inds_actual.groupby('result_code')['improve'].mean().to_dict() if not sel_inds_actual.empty else {}
-
-OA_TO_VARS = {
-    'OA1': ['protection_risk', 'vulnerability'],'OA2': ['protection_risk', 'vulnerability'],'OA3': ['protection_risk', 'vulnerability'],
-    'OA4': ['protection_risk', 'vulnerability'],'OA5': ['protection_risk', 'vulnerability'],'OA6': ['protection_risk'],
-    'OA7': ['service_efficiency', 'vulnerability'],'OA8': ['basic_needs_gap'],'OA9': ['basic_needs_gap'],
-    'OA10': ['morbidity'],'OA11': ['education_access'],'OA12': ['basic_needs_gap', 'service_efficiency'],
-    'OA13': ['vulnerability'],'OA14': ['vulnerability', 'protection_risk'],'OA15': ['vulnerability', 'protection_risk'],'OA16': ['vulnerability', 'protection_risk'],
-}
-IA_TO_VARS = {
-    'IA1': ['protection_risk', 'vulnerability'],
-    'IA2': ['basic_needs_gap', 'morbidity', 'education_access', 'vulnerability'],
-    'IA3': ['vulnerability', 'education_access', 'service_efficiency'],
-    'IA4': ['vulnerability'],
-}
-
-# Effect calculation
-# Now: effect = imp * base_scale, capped. The budget_share is NOT multiplied here
-# because Activity.apply() no longer multiplies delta by budget_share (it uses
-# budget_scale only on coverage). This cleanly separates reach from depth.
-
-BASE_EFFECT_SCALE = 0.15
+# Compute the final calculated effects for every program area.
 code_effects = {}
-for code, imp in code_imp.items():
-    if not code: continue
-    vars_ = OA_TO_VARS.get(code, []) if code.startswith('OA') else IA_TO_VARS.get(code, [])
-    effs = {}
-    for v in vars_:
-        effs[v] = float(np.clip( (imp if v in ['education_access','service_efficiency'] else -imp) * BASE_EFFECT_SCALE, -0.2, 0.2))
-    if effs: code_effects[code] = effs
 
-# Roll up to domain labels for ABM (standardized "Code - Domain")
+for code, imp in code_imp.items():
+    if not code:
+        continue
+    var_map = OA_TO_VARS.get(code, {}) if code.startswith('OA') else IA_TO_VARS.get(code, {})
+    if not var_map:
+        continue
+    effs = {}
+    for var, w in var_map.items():
+        # Flip the sign for things we want to DECREASE (like risks or sickness).
+        signed_imp = imp if var in INCREASING_VARS else -imp
+        e = nonlinear_effect(signed_imp) * float(w)
+        effs[var] = float(np.clip(e, -MAX_ABS_EFFECT, MAX_ABS_EFFECT))
+    if effs:
+        code_effects[code] = effs
+
+# 6. Organize everything into a "Library of Effects" for the simulation.
 from collections import defaultdict
 label_to_effects = defaultdict(list)
 for code, effs in code_effects.items():
@@ -516,29 +631,30 @@ for code, effs in code_effects.items():
 SRF_EFFECT_LIBRARY = {}
 for label, lst in sorted(label_to_effects.items()):
     all_vars = set().union(*[d.keys() for d in lst]) if lst else set()
-    SRF_EFFECT_LIBRARY[label] = {v: float(np.mean([d.get(v, 0.0) for d in lst])) for v in all_vars}
+    SRF_EFFECT_LIBRARY[label] = {
+        v: float(np.mean([d.get(v, 0.0) for d in lst]))
+        for v in all_vars
+    }
 
-
-
-
-
-# --- Traceability Table (with Tabs) ---
+# 7. Create a "Traceability Table" to show the math behind every score.
 from IPython.display import Markdown
-
 print("\n[Indicator-to-Effect Traceability]")
 trace_rows = []
 for code, imp in code_imp.items():
-    if not code.startswith('OA'): continue
+    if not code.startswith('OA'):
+        continue
     info = SRF_MAP.get(code, {})
-    inds = sel_inds[sel_inds['result_code'] == code]
+    inds = df_imp[df_imp['result_code'] == code] if not df_imp.empty else pd.DataFrame()
+    if inds.empty:
+        inds = sel_inds[sel_inds['result_code'] == code]
     vars_ = OA_TO_VARS.get(code, [])
     budget_pct = info.get('percentage', 0.0) * 100
     display_label = f"{code} - {info.get('domain', code)}"
     eff_lib_entry = SRF_EFFECT_LIBRARY.get(display_label, {})
     oa_full = f"{OA_FULL_LABELS.get(code, display_label)} ({budget_pct:.1f}% of budget)"
-
     for _, idx_row in inds.iterrows():
         for v in vars_:
+            raw_val = idx_row.get('raw_improve', idx_row.get('improve', None))
             trace_rows.append({
                 'Effect': v,
                 'Outcome': oa_full,
@@ -546,14 +662,14 @@ for code, imp in code_imp.items():
                 'Baseline': idx_row['baseline'],
                 'Actual': idx_row['actual'],
                 'Target': idx_row['target'],
-                'Raw Improvement': round(idx_row['improve'], 4),
+                'Raw Improvement': round(float(raw_val), 4) if pd.notna(raw_val) else None,
                 'Effect Magnitude': round(eff_lib_entry.get(v, 0.0), 4),
             })
 
 if trace_rows:
     trace_df = pd.DataFrame(trace_rows).sort_values(['Effect', 'Outcome'])
-    
     def _effect_cell_color(val):
+        if pd.isna(val) or val is None: return ''
         if val > 0:
             intensity = min(abs(val) * 5, 1.0)
             return f'background-color:rgba(46,204,113,{intensity:.2f});color:{"white" if intensity>0.5 else "black"}'
@@ -561,18 +677,16 @@ if trace_rows:
             intensity = min(abs(val) * 5, 1.0)
             return f'background-color:rgba(231,76,60,{intensity:.2f});color:{"white" if intensity>0.5 else "black"}'
         return ''
-
     def _imp_cell_color(val):
+        if pd.isna(val) or val is None: return ''
         if val > 0:
             return 'color:#27ae60;font-weight:bold'
         elif val < 0:
             return 'color:#e74c3c;font-weight:bold'
         return ''
-
     md_out = "::: {.panel-tabset}\n\n"
     for effect_name, group in trace_df.groupby('Effect'):
         md_out += f"## {effect_name.replace('_', ' ').title()}\n\n"
-        
         rows_html = ''
         for _, r in group.iterrows():
             eff_style  = _effect_cell_color(r['Effect Magnitude'])
@@ -588,7 +702,6 @@ if trace_rows:
                 f'<td style="text-align:center;{eff_style}">{r["Effect Magnitude"]:.4f}</td>'
                 f'</tr>\n'
             )
-            
         table_html = f"""
         <div style="max-height:400px; overflow-y:auto; border:1px solid #ddd; border-radius:4px;">
         <table style="border-collapse:collapse; width:100%; font-family:sans-serif; font-size:13px;">
@@ -610,20 +723,13 @@ if trace_rows:
         </div>
         """
         md_out += f"```{{=html}}\n{table_html}\n```\n\n"
-        
     md_out += ":::\n"
     display(Markdown(md_out))
 else:
     print("No indicator traceability data found.")
 
-
-#print("--- SRF Mapping & Predicted Effects ---")
-# Build a nice table for SRF_MAP
+# 8. Build final summary tables and visual networks for the Outcome Areas.
 srf_df = pd.DataFrame.from_dict(SRF_MAP, orient='index').reset_index().rename(columns={'index':'Code'})
-#print("\n[Full SRF Map]")
-# display(srf_df)
-
-# Build a nice table for effects with professional styling
 eff_rows = []
 for display_label, effs in SRF_EFFECT_LIBRARY.items():
     for var, val in effs.items():
@@ -632,28 +738,17 @@ for display_label, effs in SRF_EFFECT_LIBRARY.items():
 if eff_rows:
     eff_df = pd.DataFrame(eff_rows)
     pivot_eff = eff_df.pivot(index='Domain', columns='Variable', values='Effect').fillna(0.0)
-
     def style_effects(v):
         if v == 0: return ""
-        # Blue for positive (improvement/increase), Red for negative (decrease/risk reduction)
-        color = "0, 114, 181" if v > 0 else "214, 39, 40" # RGB for blue/red
-        alpha = min(abs(v) * 4, 1.0) # Scale transparency by force of effect
+        color = "0, 114, 181" if v > 0 else "214, 39, 40"
+        alpha = min(abs(v) * 4, 1.0)
         return f"background-color: rgba({color}, {alpha:.2f}); color: {'white' if alpha > 0.5 else 'black'}"
-
     print("\n[Predicted Outcome Effects Estimation]")
-    # Filter to OA only
     oa_pivot_eff = pivot_eff[pivot_eff.index.str.startswith('OA')].copy()
-    # Create a consistent mapping for reindexing
-    # The pivot_eff index format is 'CODE - FULL_LABEL'
-    # We want to reindex by 'FULL_LABEL'
-    # So, we need to extract the FULL_LABEL from the pivot_eff index
     pivot_index_to_full_label = {idx: idx.split(' - ', 1)[1] if ' - ' in idx else idx for idx in oa_pivot_eff.index}
     oa_pivot_eff = oa_pivot_eff.rename(index=pivot_index_to_full_label)
-
-    # Reorder the OA‑only effects table to match OA_FULL_LABELS order
     oa_order = list(OA_FULL_LABELS.values())
     oa_pivot_eff = oa_pivot_eff.reindex(oa_order)
-
     if not oa_pivot_eff.empty:
         display(oa_pivot_eff.style.map(style_effects).format("{:.3f}"))
     else:
@@ -662,158 +757,61 @@ else:
     print("\n[Predicted Effects Estimation]")
     print("No effects calculated for this activity based on available indicator data.")
 
+# Define the network plotting tool to visualize the results.
 import networkx as nx
 import matplotlib.pyplot as plt
 import textwrap
 
 def plot_srf_network(srf_map, effect_lib, level_filter=None):
     G = nx.DiGraph()
-
-    # Colors
-    outcome_color = "#2ecc71"     # Outcome = green circles
-    effect_color = "#b4d4ff"      # Effect = light blue squares
-    zero_edge_color = "#bdc3c7"   # Light grey for zero-value dotted edges
-
-    # Filter map
-    filtered_map = (
-        {k: v for k, v in srf_map.items() if v['level'] == level_filter}
-        if level_filter else srf_map
-    )
+    outcome_color = "#2ecc71"
+    effect_color = "#b4d4ff"
+    zero_edge_color = "#bdc3c7"
+    filtered_map = ({k: v for k, v in srf_map.items() if v['level'] == level_filter} if level_filter else srf_map)
     if not filtered_map:
-        print(f"No data found for level: {level_filter}")
         return
-
-    # Node size scaling (budget pct)
     pcts = [v.get("percentage", 0.0) for v in filtered_map.values()]
     min_pct, max_pct = (min(pcts), max(pcts)) if pcts else (0.0, 1.0)
     min_node_size, max_node_size = 300, 2200
-
-    # Build graph
     for code, info in filtered_map.items():
         full_label = f"{code} - {info['domain']}"
         label_wrapped = "\n".join(textwrap.wrap(full_label, 20))
         pct = info.get("percentage", 0.0)
         pct_text = f"({pct:.1f}%)"
         node_label = f"{label_wrapped}\n{pct_text}"
-
-        # Scale size
         norm = (pct - min_pct) / (max_pct - min_pct) if max_pct > min_pct else 0.5
         node_size = min_node_size + int(norm * (max_node_size - min_node_size))
-
-        # Add outcome node
-        G.add_node(node_label,
-                   original_label=full_label,
-                   type="outcome",
-                   color=outcome_color,
-                   size=node_size)
-
-        # Effects
+        G.add_node(node_label, type="outcome", color=outcome_color, size=node_size)
         for eff_name, value in effect_lib.get(full_label, {}).items():
             eff_label = "\n".join(textwrap.wrap(eff_name, 15))
-
             if eff_label not in G:
-                G.add_node(eff_label,
-                           type="effect",
-                           color=effect_color,
-                           size=2600)
-
-            # Zero effects → thin grey dotted line (no arrow)
+                G.add_node(eff_label, type="effect", color=effect_color, size=2600)
             if value == 0:
-                G.add_edge(node_label, eff_label,
-                           weight=1.0,
-                           color=zero_edge_color,
-                           val=value,
-                           style="dotted",
-                           arrow=False)
-
-            # Non-zero effects → thicker & more visible
+                G.add_edge(node_label, eff_label, weight=1.0, color=zero_edge_color, val=value, style="dotted", arrow=False)
             else:
                 color = "#3498db" if value > 0 else "#e74c3c"
-                base_width = 1.5
-                scale = 80   # Increased scaling factor (was 50)
-
-                G.add_edge(node_label, eff_label,
-                           weight=base_width + abs(value) * scale,
-                           color=color,
-                           val=value,
-                           style="solid",
-                           arrow=True)
-
-    # --------------------------------------
-    # FIXED LAYOUT (staggered left & right)
-    # --------------------------------------
+                G.add_edge(node_label, eff_label, weight=1.5 + abs(value) * 80, color=color, val=value, style="solid", arrow=True)
     pos = {}
-
     outcomes = [n for n, d in G.nodes(data=True) if d['type'] == "outcome"]
     effects  = [n for n, d in G.nodes(data=True) if d['type'] == "effect"]
-
-    # Outcomes (left staggered)
-    x1, x2 = -1.3, -1.05
-    y0, dy = 1.0, -0.16
-
-    for i, n in enumerate(outcomes):
-        pos[n] = (x1 if i % 2 == 0 else x2, y0 + i * dy)
-
-    # Effects (right staggered)
-    xr1, xr2 = 1.2, 1.45
-    y0e, dye = 0.8, -0.22
-
-    for i, n in enumerate(effects):
-        pos[n] = (xr1 if i % 2 == 0 else xr2, y0e + i * dye)
-
-    # --------------------------------------
-    # PLOT
-    # --------------------------------------
+    x1, x2, y0, dy = -1.3, -1.05, 1.0, -0.16
+    for i, n in enumerate(outcomes): pos[n] = (x1 if i % 2 == 0 else x2, y0 + i * dy)
+    xr1, xr2, y0e, dye = 1.2, 1.45, 0.8, -0.22
+    for i, n in enumerate(effects): pos[n] = (xr1 if i % 2 == 0 else xr2, y0e + i * dye)
     plt.figure(figsize=(8, 10))
-
-    # Draw outcomes (green circles)
-    nx.draw_networkx_nodes(
-        G, pos,
-        nodelist=outcomes,
-        node_color=outcome_color,
-        node_size=[G.nodes[n]["size"] for n in outcomes],
-        linewidths=0, alpha=0.95, node_shape="o"
-    )
-
-    # Draw effects (blue squares)
-    nx.draw_networkx_nodes(
-        G, pos,
-        nodelist=effects,
-        node_color=effect_color,
-        node_size=[G.nodes[n]["size"] for n in effects],
-        linewidths=0, alpha=0.95, node_shape="s"
-    )
-
-    # Draw edges
+    nx.draw_networkx_nodes(G, pos, nodelist=outcomes, node_color=outcome_color, node_size=[G.nodes[n]["size"] for n in outcomes], alpha=0.95)
+    nx.draw_networkx_nodes(G, pos, nodelist=effects, node_color=effect_color, node_size=[G.nodes[n]["size"] for n in effects], alpha=0.95, node_shape="s")
     for u, v, d in G.edges(data=True):
-        nx.draw_networkx_edges(
-            G, pos,
-            edgelist=[(u, v)],
-            width=d["weight"],
-            edge_color=d["color"],
-            style=d["style"],
-            arrows=d.get("arrow", False),
-            arrowsize=25,
-            connectionstyle="arc3,rad=0.22"
-        )
-
-    # Edge labels
+        nx.draw_networkx_edges(G, pos, edgelist=[(u, v)], width=d["weight"], edge_color=d["color"], style=d["style"], arrows=d.get("arrow", False), arrowsize=25, connectionstyle="arc3,rad=0.22")
     edge_labels = {(u, v): f"{d['val']:.3f}" for u, v, d in G.edges(data=True)}
-    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels,
-                                 font_size=7, font_color="#2c3e50")
-
-    # Node labels
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=7, font_color="#2c3e50")
     nx.draw_networkx_labels(G, pos, font_size=8, font_weight="bold")
-
-    plt.title("Effect of Outcome Areas\n(Blue = Increase / Red = Decrease / Grey = Zero)",
-              fontweight="bold", fontsize=14)
+    plt.title("Effect of Outcome Areas\n(Blue = Increase / Red = Decrease / Grey = Zero)", fontweight="bold", fontsize=14)
     plt.axis("off")
     plt.tight_layout()
     plt.show()
 
-#print("\n[Visualizing Outcome Areas (OA) Logic]")
-
-
+# Show the results.
 plot_srf_network(SRF_MAP, SRF_EFFECT_LIBRARY, level_filter='OA')
 ```
 
@@ -839,29 +837,13 @@ plot_srf_network(SRF_MAP, SRF_EFFECT_LIBRARY, level_filter='OA')
 #| label: scenario
 #| output: true
 
-from numpy.random import SeedSequence, default_rng
+# 1. Set up random number generators for each outcome area to ensure simulation variety.
+all_effect_domains = sorted(SRF_EFFECT_LIBRARY.keys())
+ss_acts = SeedSequence(BASE_SEED).spawn(len(all_effect_domains))
+rng_by_domain = {dom: default_rng(ss) for dom, ss in zip(all_effect_domains, ss_acts)}
 
-EFFECT_SCALE_MULT = 1.0  # used for sensitivity OAT
-
-class Households:
-    def __init__(self, n=5000):
-        self.vulnerability     = np.clip(np.random.beta(2, 5, size=n), 0, 1)
-        self.protection_risk   = np.clip(np.random.beta(2.5, 4, size=n), 0, 1)
-        self.basic_needs_gap   = np.clip(np.random.beta(2, 6, size=n), 0, 1)
-        self.education_access  = np.clip(np.random.beta(2, 3, size=n), 0, 1)
-        self.morbidity         = np.clip(np.random.beta(2, 6, size=n), 0, 1)
-        self.service_efficiency= np.zeros(n)
-        self.n = n
-    def as_dict(self):
-        return {
-            'vulnerability': self.vulnerability,
-            'protection_risk': self.protection_risk,
-            'basic_needs_gap': self.basic_needs_gap,
-            'education_access': self.education_access,
-            'morbidity': self.morbidity,
-            'service_efficiency': self.service_efficiency,
-        }
-
+# 2. Define the "Activity" class: this acts as a blueprint for a specific intervention.
+# It calculates how many households are supported based on the budget share.
 class Activity:
     def __init__(self, name, srf_domain, budget_share, coverage=0.3, intensity=1.0, rng=None):
         self.name = name
@@ -871,93 +853,20 @@ class Activity:
         self.intensity = float(intensity)
         self.effects = SRF_EFFECT_LIBRARY.get(srf_domain, {})
         self.rng = rng or default_rng()
-    def apply(self, hh: 'Households', budget_scale: float = 1.0):
+
+    def apply(self, hh, budget_scale=1.0, return_effect_only=False):
+        # Calculate the impact without actually changing the households yet (this happens in the simulator).
+        if not self.effects:
+            return {} if return_effect_only else None
         effective_coverage = min(0.9, self.coverage * budget_scale)
         k = int(effective_coverage * hh.n)
-        if k <= 0 or not self.effects:
-            return
+        if k <= 0:
+            return {} if return_effect_only else None
         idx = self.rng.choice(hh.n, size=k, replace=False)
+        effect_dict = {var: (eff * self.intensity * EFFECT_SCALE_MULT, idx) for var, eff in self.effects.items()}
+        return effect_dict if return_effect_only else None
 
-        primary_adjustments = {} # Store actual changes for collinearity propagation
-
-        for var, eff in self.effects.items():
-            adj_value = eff * self.intensity * EFFECT_SCALE_MULT
-            original_values_at_idx = getattr(hh, var)[idx].copy() # Capture original values before applying primary effect
-            apply_effect_to_household_var(hh, var, adj_value, idx)
-            # Calculate the actual change applied by the primary effect
-            primary_adjustments[var] = getattr(hh, var)[idx] - original_values_at_idx
-            
-        # Now apply collinear effects based on the primary_adjustments
-        # These are applied sequentially based on the collinearity definitions
-        # The 'primary_change' value already reflects the direction of impact.
-        # For example, if protection_risk improved (decreased), primary_change for it would be negative.
-        # apply_effect_to_household_var will handle the correct application (e.g., further decrease vulnerability).
-        for var, primary_change in primary_adjustments.items():
-            if var == "protection_risk" and COLLINEARITY_PR_VUL != 0:
-                apply_effect_to_household_var(hh, "vulnerability", primary_change * COLLINEARITY_PR_VUL, idx)
-            elif var == "vulnerability" and COLLINEARITY_VUL_PR != 0:
-                apply_effect_to_household_var(hh, "protection_risk", primary_change * COLLINEARITY_VUL_PR, idx)
-
-            if var == "basic_needs_gap" and COLLINEARITY_BNG_MOR != 0:
-                apply_effect_to_household_var(hh, "morbidity", primary_change * COLLINEARITY_BNG_MOR, idx)
-            elif var == "morbidity" and COLLINEARITY_MOR_BNG != 0:
-                apply_effect_to_household_var(hh, "basic_needs_gap", primary_change * COLLINEARITY_MOR_BNG, idx)
-
-            if var == "service_efficiency" and COLLINEARITY_SE_EA != 0:
-                apply_effect_to_household_var(hh, "education_access", primary_change * COLLINEARITY_SE_EA, idx)
-            elif var == "education_access" and COLLINEARITY_EA_SE != 0:
-                apply_effect_to_household_var(hh, "service_efficiency", primary_change * COLLINEARITY_EA_SE, idx)
-
-            if var == "basic_needs_gap" and COLLINEARITY_BNG_VUL != 0:
-                apply_effect_to_household_var(hh, "vulnerability", primary_change * COLLINEARITY_BNG_VUL, idx)
-            elif var == "vulnerability" and COLLINEARITY_VUL_BNG != 0:
-                apply_effect_to_household_var(hh, "basic_needs_gap", primary_change * COLLINEARITY_VUL_BNG, idx)
-
-
-class Environment:
-    def __init__(self, households: Households, rng=None, drift_mults=None):
-        self.hh = households
-        self.time = 0
-        self.rng = rng or default_rng()
-        self.drift_mults = drift_mults or {k:1.0 for k in ['vulnerability','protection','basic','morbidity','service','education']}
-    def natural_drift(self):
-        n = self.hh.n
-        rnorm = self.rng.normal
-        self.hh.vulnerability     = np.clip(self.hh.vulnerability    + rnorm( 0.005*self.drift_mults['vulnerability'], 0.01, n), 0, 1)
-        self.hh.protection_risk   = np.clip(self.hh.protection_risk  + rnorm( 0.006*self.drift_mults['protection'], 0.01, n), 0, 1)
-        self.hh.basic_needs_gap   = np.clip(self.hh.basic_needs_gap  + rnorm( 0.004*self.drift_mults['basic'], 0.01, n), 0, 1)
-        self.hh.morbidity         = np.clip(self.hh.morbidity        + rnorm( 0.003*self.drift_mults['morbidity'], 0.01, n), 0, 1)
-        self.hh.service_efficiency= np.clip(self.hh.service_efficiency + rnorm(-0.002*self.drift_mults['service'], 0.01, n), 0, 1)
-        self.hh.education_access  = np.clip(self.hh.education_access + rnorm(-0.002*self.drift_mults['education'], 0.01, n), 0, 1)
-    def indicators(self):
-        return {
-            'Vulnerability (average effect)': float(self.hh.vulnerability.mean()),
-            'Protection risk (average effect)': float(self.hh.protection_risk.mean()),
-            'Basic needs gap (average effect)': float(self.hh.basic_needs_gap.mean()),
-            'Education access (average effect)': float(self.hh.education_access.mean()),
-            'Morbidity (average effect)': float(self.hh.morbidity.mean()),
-            'Service efficiency (average effect)': float(self.hh.service_efficiency.mean()),
-        }
-
-def simulate(env: Environment, activities: list, months: int = 6, budget_scale: float = 1.0):
-    timeline = []
-    for t in range(months + 1):
-        timeline.append({**env.indicators(), 'month': t})
-        if t == months: break
-        env.natural_drift()
-        for a in activities:
-            a.apply(env.hh, budget_scale=budget_scale)
-        env.time += 1
-    return pd.DataFrame(timeline)
-
-
-
-all_effect_domains = sorted(SRF_EFFECT_LIBRARY.keys())
-ss_acts = SeedSequence(BASE_SEED).spawn(len(all_effect_domains))
-rng_by_domain = {dom: default_rng(ss) for dom, ss in zip(all_effect_domains, ss_acts)}
-
-# Portfolio builders
-
+# 3. Create helper functions to build our different "What-If" portfolios.
 def portfolio_from_shares(df, cap=8):
     if df.empty or df['percentage'].sum() <= 0: return []
     d = df.sort_values('percentage', ascending=False).head(cap).copy()
@@ -978,6 +887,7 @@ def make_targeted_portfolio(oa_weights: dict, label_prefix: str = '') -> list:
         acts.append(Activity(name=f'{label_prefix}{info["domain"]}', srf_domain=label, budget_share=float(w/total_w), rng=rng_by_domain.get(label)))
     return acts
 
+# 4. Build the predefined scenarios (Current, Equal, Protection-First, etc.).
 current_activities = portfolio_from_shares(sel_oa, cap=8)
 
 top_oa = sel_oa.sort_values('percentage', ascending=False).head(8)
@@ -990,14 +900,11 @@ else:
     equal_activities = []
 
 protection_first_activities = make_targeted_portfolio({c:w for c,w in {'OA1':20,'OA2':15,'OA3':10,'OA4':10,'OA5':10,'OA6':5,'OA7':10,'OA13':10,'OA14':10}.items() if c in SRF_MAP}, 'Prot-')
-
 basic_needs_activities = make_targeted_portfolio({c:w for c,w in {'OA8':25,'OA9':20,'OA12':20,'OA10':15,'OA1':10,'OA11':10}.items() if c in SRF_MAP}, 'Basic-')
-
 solutions_activities = make_targeted_portfolio({c:w for c,w in {'OA14':20,'OA15':15,'OA16':15,'OA1':15,'OA2':10,'OA11':10,'OA13':15}.items() if c in SRF_MAP}, 'Sol-')
-
 gender_child_activities = make_targeted_portfolio({c:w for c,w in {'OA4':25,'OA5':25,'OA1':10,'OA10':10,'OA11':10,'OA8':10,'OA6':10}.items() if c in SRF_MAP}, 'GC-')
 
-# Gap-closing
+# Create the "Gap-Closing" scenario: focuses money on areas that missed their targets the most.
 if code_imp:
     oa_imp = {c:v for c,v in code_imp.items() if c in SRF_MAP and c.startswith('OA')}
     if oa_imp:
@@ -1010,9 +917,8 @@ if code_imp:
 else:
     gap_closing_activities = []
 
-# ----- 10) LLM / AI-Suggested Portfolio -----
-# Primary: Anthropic API (claude-sonnet-4-20250514). Fallback: Azure OpenAI. 
-# Further fallback: rule-based gap heuristic so the scenario is never empty.
+# 5. Integrate an AI (LLM) to suggest an "Optimized" portfolio.
+# We send the performance data to the AI and ask for its strategic advice.
 
 AZURE_ENDPOINT   = os.getenv('AZURE_OPENAI_ENDPOINT')
 AZURE_KEY        = os.getenv('AZURE_OPENAI_API_KEY')
@@ -1062,55 +968,32 @@ DATA CARD:
 '''
 
 def call_anthropic_portfolio(card):
-    """Call Anthropic API as primary LLM for portfolio suggestion."""
     import urllib.request
     payload = json.dumps({
         "model": "claude-sonnet-4-20250514",
         "max_tokens": 1500,
         "system": SYSTEM_PROMPT,
-        "messages": [{"role": "user", "content": PORTFOLIO_PROMPT.format(
-            schema=json.dumps(PORTFOLIO_SCHEMA, indent=2),
-            card=json.dumps(card, indent=2)
-        )}]
+        "messages": [{"role": "user", "content": PORTFOLIO_PROMPT.format(schema=json.dumps(PORTFOLIO_SCHEMA, indent=2), card=json.dumps(card, indent=2))}]
     }).encode()
-    req = urllib.request.Request(
-        "https://api.anthropic.com/v1/messages",
-        data=payload,
-        headers={"Content-Type": "application/json", "anthropic-version": "2023-06-01"},
-        method="POST"
-    )
+    req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload, headers={"Content-Type": "application/json", "anthropic-version": "2023-06-01"}, method="POST")
     with urllib.request.urlopen(req, timeout=60) as resp:
         data = json.loads(resp.read())
     return data['content'][0]['text']
 
 def call_azure_portfolio(card):
-    if azure_client is None:
-        raise RuntimeError('Azure client not available.')
+    if azure_client is None: raise RuntimeError('Azure client not available.')
     user_prompt = PORTFOLIO_PROMPT.format(schema=json.dumps(PORTFOLIO_SCHEMA, indent=2), card=json.dumps(card, indent=2))
-    resp = azure_client.chat.completions.create(
-        model=AZURE_DEPLOYMENT,
-        temperature=0.3,
-        messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_prompt}]
-    )
+    resp = azure_client.chat.completions.create(model=AZURE_DEPLOYMENT, temperature=0.3, messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_prompt}])
     return resp.choices[0].message.content
 
 def parse_llm_portfolio_response(raw_resp):
-    """Parse JSON from LLM response; strip markdown fences if present."""
     clean = re.sub(r'```(?:json)?', '', raw_resp).strip().rstrip('`').strip()
     return json.loads(clean)
 
-llm_portfolio_json = None
-llm_narrative = ""
-
-# Finance summary for context
+# Prepare the data summary for the AI.
 tr = transactions_df[transactions_df['activity_id'] == ACTIVITY_ID]
 providers = tr.groupby('provider')['value_usd'].sum().sort_values(ascending=False).head(8).round(0)
-
-# Enrich decision_card with OA indicators
-all_oa_codes = sorted(list(
-    set(sel_oa['code'].unique()) | 
-    set(sel_inds[sel_inds['result_code'].str.startswith('OA', na=False)]['result_code'].unique())
-))
+all_oa_codes = sorted(list(set(sel_oa['code'].unique()) | set(sel_inds[sel_inds['result_code'].str.startswith('OA', na=False)]['result_code'].unique())))
 oa_data = []
 for code in all_oa_codes:
     oa_budget = sel_oa[sel_oa['code'] == code]
@@ -1118,72 +1001,38 @@ for code in all_oa_codes:
     info = SRF_MAP.get(code, {})
     label = info.get('domain', code)
     oa_inds = sel_inds[sel_inds['result_code'] == code].copy()
-    inds_list = []
-    if not oa_inds.empty:
-        for _, i in oa_inds.iterrows():
-            inds_list.append({
-                'title': i.get('indicator_title'),
-                'baseline': i.get('baseline'),
-                'target': i.get('target'),
-                'actual': i.get('actual'),
-                'normalized_improvement': round(float(i.get('improve', 0.0)), 4)
-            })
+    inds_list = [{'title': i.get('indicator_title'), 'baseline': i.get('baseline'), 'target': i.get('target'), 'actual': i.get('actual'), 'normalized_improvement': round(float(i.get('improve', 0.0)), 4)} for _, i in oa_inds.iterrows()]
     oa_data.append({'code': code, 'label': label, 'current_budget_percentage': budget_pct, 'indicators': inds_list})
 
-decision_card = {
-    'activity_id': ACTIVITY_ID,
-    'title': sel_act.get('title', 'Unknown'),
-    'total_value_usd': expenditure_total_usd,
-    'top_providers_usd': list(providers.items()),
-    'outcome_areas': oa_data,
-    'available_srf_domains': [f"{c} - {v['domain']}" for c, v in SRF_MAP.items() if v['level'] == 'OA']
-}
+decision_card = {'activity_id': ACTIVITY_ID, 'title': sel_act.get('title', 'Unknown'), 'total_value_usd': expenditure_total_usd, 'top_providers_usd': list(providers.items()), 'outcome_areas': oa_data, 'available_srf_domains': [f"{c} - {v['domain']}" for c, v in SRF_MAP.items() if v['level'] == 'OA']}
 
+llm_portfolio_json, llm_narrative = None, ""
 if USE_LLM:
     raw_resp = None
-    source = None
     try:
         raw_resp = call_anthropic_portfolio(decision_card)
-        source = "Anthropic (Claude)"
-    except Exception as e_ant:
-        #print(f'Anthropic API call failed: {e_ant}. Trying Azure...')
-        try:
-            raw_resp = call_azure_portfolio(decision_card)
-            source = "Azure OpenAI"
-        except Exception as e_az:
-            print(f'Azure call also failed: {e_az}. Using gap-closing fallback.')
+    except Exception:
+        try: raw_resp = call_azure_portfolio(decision_card)
+        except Exception: pass
     if raw_resp:
         try:
             data = parse_llm_portfolio_response(raw_resp)
-            llm_portfolio_json = data.get('portfolio', [])
-            llm_narrative = data.get('narrative', 'No narrative provided.')
-            print(f'LLM portfolio generated with {AZURE_DEPLOYMENT}.')
-        except Exception as e_parse:
-            print(f'LLM response parse failed: {e_parse}')
+            llm_portfolio_json, llm_narrative = data.get('portfolio', []), data.get('narrative', 'No narrative.')
+        except Exception: pass
 
 llm_activities = []
 if llm_portfolio_json:
     for item in llm_portfolio_json:
-        domain_name = item.get('srf_domain', '')
-        found_code = None
-        # Try exact standard label match first
+        domain_name, found_code = item.get('srf_domain', ''), None
         for code, info in SRF_MAP.items():
             if f"{code} - {info['domain']}" == domain_name or info['domain'] == domain_name or code == domain_name:
-                found_code = code
-                domain_name = info['domain']
-                break
+                found_code, domain_name = code, info['domain']; break
         standard_label = f"{found_code} - {domain_name}" if found_code else domain_name
-        llm_activities.append(Activity(
-            item.get('activity_name', 'AI Activity'),
-            standard_label,
-            float(item.get('budget_share', 0.1))
-        ))
+        llm_activities.append(Activity(item.get('activity_name', 'AI Activity'), standard_label, float(item.get('budget_share', 0.1))))
 else:
-    # Fallback: use gap-closing as the LLM scenario
-    llm_activities = gap_closing_activities
-    llm_narrative = "(LLM unavailable — gap-closing heuristic used as fallback)"
+    llm_activities, llm_narrative = gap_closing_activities, "(LLM unavailable — gap-closing used as fallback)"
 
-
+# 6. Finalize the list of all scenarios to be compared.
 all_scenarios = [
     ('No intervention', [], 0.0),
     ('Current', current_activities, 1.0),
@@ -1197,55 +1046,25 @@ all_scenarios = [
 ]
 all_scenarios = [(n,a,s) for n,a,s in all_scenarios if (n=='No intervention' or a)]
 
-# Build a structured scenario comparison table
-# Use full OA canonical labels throughout
+# 7. Build a comparison table showing how the budget is split in each plan.
 def relabel_domain(raw_label: str) -> str:
-    """Map 'OAx - Some Name' or bare code to the canonical full OA label."""
     code = raw_label.split(' - ')[0].strip()
     return OA_FULL_LABELS.get(code, raw_label)
 
 scenario_data = []
 for name, p, bscale in all_scenarios:
-    if not p:
-        continue
+    if not p: continue
     eff_budget = expenditure_total_usd * bscale
     for a in p:
-        scenario_data.append({
-            'Scenario': name,
-            'Outcome': relabel_domain(a.srf_domain),
-            'Allocation %': round(a.budget_share * 100, 1),
-            'Budget Scale': f"{int(bscale*100)}%",
-            'Effective Budget USD': round(eff_budget * a.budget_share, 0)
-        })
+        scenario_data.append({'Scenario': name, 'Outcome': relabel_domain(a.srf_domain), 'Allocation %': round(a.budget_share * 100, 1), 'Budget Scale': f"{int(bscale*100)}%", 'Effective Budget USD': round(eff_budget * a.budget_share, 0)})
 
 df_scenarios = pd.DataFrame(scenario_data)
+pivot_p = df_scenarios.pivot_table(index='Outcome', columns='Scenario', values='Allocation %', aggfunc='sum').fillna(0)
+pivot_p = pivot_p.reindex(index=list(OA_FULL_LABELS.values()), columns=[name for name, _, _ in all_scenarios])
 
-#print("DEBUG: scenario_data entries:", len(scenario_data))
-#print("DEBUG: df_scenarios columns:", df_scenarios.columns.tolist())
-#print("DEBUG: df_scenarios head:")
-#print(df_scenarios.head())
-
-# Pivot: rows = Outcome, columns = Scenario (Allocation %)
-pivot_p = df_scenarios.pivot_table(
-    index='Outcome',
-    columns='Scenario',
-    values='Allocation %',
-    aggfunc='sum'
-).fillna(0)
-
-# Reindex both rows (Outcome Areas) and columns (Scenarios) to canonical orders
-pivot_p = pivot_p.reindex(
-    index=list(OA_FULL_LABELS.values()),
-    columns=[name for name, _, _ in all_scenarios]
-)
-
-
-def format_alloc(v):
-    return f"{v:.1f}%" if v > 0 else "—"
-
+def format_alloc(v): return f"{v:.1f}%" if v > 0 else "—"
 def style_portfolio(v):
-    if v == 0:
-        return "color: #bdc3c7;"
+    if v == 0: return "color: #bdc3c7;"
     intensity = min(v / 35, 1.0)
     return f"background-color: rgba(46, 204, 113, {intensity:.2f}); color: {'white' if intensity > 0.5 else 'black'};"
 
@@ -1253,12 +1072,7 @@ print("--- Outcome Area Portfolio Comparison (Allocation %) ---")
 display(pivot_p.style.map(style_portfolio).format(format_alloc))
 
 if llm_narrative:
-    display(HTML(f"""
-    <div style="background-color: #f9f9f9; border-left: 6px solid #3498db; padding: 20px; margin-top: 20px; font-family: sans-serif;">
-        <h3 style="margin-top: 0; color: #3498db;">AI Justification for Budget Allocation</h3>
-        <p style="line-height: 1.6; white-space: pre-wrap;">{llm_narrative}</p>
-    </div>
-    """))
+    display(HTML(f"""<div style="background-color: #f9f9f9; border-left: 6px solid #3498db; padding: 20px; margin-top: 20px; font-family: sans-serif;"><h3 style="margin-top: 0; color: #3498db;">AI Justification for Budget Allocation</h3><p style="line-height: 1.6; white-space: pre-wrap;">{llm_narrative}</p></div>"""))
 ```
 
 ---
@@ -1276,14 +1090,390 @@ if llm_narrative:
 *   **Applying the Interactions:** We also model the interactions between interventions. For example, providing clean water not only reduces illness but also improves the ability of children to attend school. 
 *   **Checking the Results:** At the end of the 12 virtual months, we check which budget plan led to the healthiest, safest, and most stable households.
 :::
-
 ```{python}
 #| label: sim
 #| output: true
 
-np.random.seed(BASE_SEED); random.seed(BASE_SEED)
-H_base = Households(n=HOUSEHOLDS)
+# This is the "Virtual World Simulator". It creates thousands of digital households 
+# and tracks how their lives change month-by-month over a year.
 
+from numpy.random import SeedSequence, default_rng
+
+EFFECT_SCALE_MULT = 1.0  # used for sensitivity OAT
+
+# 1. Define the "Households" class. 
+# This represents thousands of digital people, each with their own health, safety, and stability scores.
+class Households:
+    def __init__(self, n=5000):
+        # Initialize each household with random but realistic starting levels for 6 key areas.
+        self.vulnerability     = np.clip(np.random.beta(2, 5, size=n), 0, 1)
+        self.protection_risk   = np.clip(np.random.beta(2.5, 4, size=n), 0, 1)
+        self.basic_needs_gap   = np.clip(np.random.beta(2, 6, size=n), 0, 1)
+        self.education_access  = np.clip(np.random.beta(2, 3, size=n), 0, 1)
+        self.morbidity         = np.clip(np.random.beta(2, 6, size=n), 0, 1)
+        self.service_efficiency= np.zeros(n)
+        self.n = n
+    def as_dict(self):
+        return {
+            'vulnerability': self.vulnerability,
+            'protection_risk': self.protection_risk,
+            'basic_needs_gap': self.basic_needs_gap,
+            'education_access': self.education_access,
+            'morbidity': self.morbidity,
+            'service_efficiency': self.service_efficiency,
+        }
+
+
+# 2. Define the "Environment" class.
+# This handles "Natural Drift"—the tendency for situations to slowly worsen if no help is provided.
+class Environment:
+    def __init__(self, households: Households, rng=None, drift_mults=None):
+        self.hh = households
+        self.time = 0
+        self.rng = rng or default_rng()
+        self.drift_mults = drift_mults or {k:1.0 for k in ['vulnerability','protection','basic','morbidity','service','education']}
+    def natural_drift(self):
+        n = self.hh.n
+        rnorm = self.rng.normal
+        self.hh.vulnerability     = np.clip(self.hh.vulnerability    + rnorm( 0.005*self.drift_mults['vulnerability'], 0.01, n), 0, 1)
+        self.hh.protection_risk   = np.clip(self.hh.protection_risk  + rnorm( 0.006*self.drift_mults['protection'], 0.01, n), 0, 1)
+        self.hh.basic_needs_gap   = np.clip(self.hh.basic_needs_gap  + rnorm( 0.004*self.drift_mults['basic'], 0.01, n), 0, 1)
+        self.hh.morbidity         = np.clip(self.hh.morbidity        + rnorm( 0.003*self.drift_mults['morbidity'], 0.01, n), 0, 1)
+        self.hh.service_efficiency= np.clip(self.hh.service_efficiency + rnorm(-0.002*self.drift_mults['service'], 0.01, n), 0, 1)
+        self.hh.education_access  = np.clip(self.hh.education_access + rnorm(-0.002*self.drift_mults['education'], 0.01, n), 0, 1)
+    def indicators(self):
+        return {
+            'Vulnerability (average effect)': float(self.hh.vulnerability.mean()),
+            'Protection risk (average effect)': float(self.hh.protection_risk.mean()),
+            'Basic needs gap (average effect)': float(self.hh.basic_needs_gap.mean()),
+            'Education access (average effect)': float(self.hh.education_access.mean()),
+            'Morbidity (average effect)': float(self.hh.morbidity.mean()),
+            'Service efficiency (average effect)': float(self.hh.service_efficiency.mean()),
+        }
+
+
+
+# 3. Use a "Gaussian Mixture Model" (GMM) to initialize the digital households.
+# This ensures our virtual population has a realistic mix of stable, struggling, and high-risk families.
+from sklearn.mixture import GaussianMixture
+def fit_gmm_from_synthetic():
+    """
+    Creates a synthetic multimodal distribution that approximates
+    realistic heterogeneity found in vulnerability, risk, needs, etc.
+    This is a fallback in absence of real survey data.
+    """
+    synthetic = np.concatenate([
+        np.random.beta(2, 6, 4000),   # majority stable households
+        np.random.beta(6, 3, 3000),   # moderate vulnerability
+        np.random.beta(2, 2, 3000),   # high risk / high need subgroup
+    ]).reshape(-1, 1)
+
+    gmm = GaussianMixture(n_components=3, covariance_type='full', max_iter=500)
+    gmm.fit(synthetic)
+    return gmm
+
+# Fit a GMM once for the whole ABM run
+GMM_MODEL = fit_gmm_from_synthetic()
+
+def gmm_sample(n):
+    """
+    Draw bounded household state values from the calibrated GMM.
+    Output is always in [0, 1].
+    """
+    samples, _ = GMM_MODEL.sample(n)
+    return np.clip(samples.flatten(), 0, 1)
+
+# Create the base household population using GMM
+np.random.seed(BASE_SEED); random.seed(BASE_SEED)
+
+H_base = Households(n=HOUSEHOLDS)
+H_base.vulnerability      = gmm_sample(HOUSEHOLDS)
+H_base.protection_risk    = gmm_sample(HOUSEHOLDS)
+H_base.basic_needs_gap    = gmm_sample(HOUSEHOLDS)
+H_base.education_access   = gmm_sample(HOUSEHOLDS)
+H_base.morbidity          = gmm_sample(HOUSEHOLDS)
+H_base.service_efficiency = gmm_sample(HOUSEHOLDS)
+
+#print("[GMM] Household populations initialized using Gaussian Mixture distributions.")
+
+
+# 4. Define the rules for "Dynamics"—how households change over time.
+# Better than additive "state += delta" inside simulate()
+# Variables where higher is better
+INCREASING_VARS = {'education_access', 'service_efficiency'}
+
+# Per‑variable responsiveness (you can tune these)
+VAR_STRENGTH = {
+    'vulnerability':      0.10,
+    'protection_risk':    0.10,
+    'basic_needs_gap':    0.14,
+    'education_access':   0.08,
+    'morbidity':          0.12,
+    'service_efficiency': 0.16
+}
+
+# Optional per‑variable lag (months before interventions show effects)
+VAR_LAG = {
+    'vulnerability':      1,
+    'protection_risk':    1,
+    'basic_needs_gap':    0,
+    'education_access':   2,
+    'morbidity':          1,
+    'service_efficiency': 0
+}
+
+# Slope of the logistic saturation
+LOGISTIC_STEEPNESS = 1.8
+
+def nonlinear_update_scalar(current, effect_value, month, var_name):
+    """
+    Logistic, delayed, bounded update for a single scalar state value.
+    """
+    lag = VAR_LAG.get(var_name, 0)
+    if month < lag:
+        return float(current)
+
+    # Polarity: for "lower is better" variables we flip sign
+    inc = (var_name in INCREASING_VARS)
+    signed_effect = effect_value if inc else -effect_value
+
+    # Logistic shift in [-0.5, +0.5]
+    logistic_shift = (1.0 / (1.0 + np.exp(-LOGISTIC_STEEPNESS * signed_effect))) - 0.5
+
+    # Apply with variable‑specific strength
+    rs = VAR_STRENGTH.get(var_name, 0.12)
+    new_val = current + rs * logistic_shift
+
+    return float(np.clip(new_val, 0.0, 1.0))
+
+
+def get_activity_effects(activity, hh, budget_scale):
+    """
+    Ask the activity to *compute* its per‑variable effect intensities
+    WITHOUT mutating households (MODE A).
+    Your Activity.apply must support: return_effect_only=True
+    and return a dict, e.g. {'vulnerability': +0.03, 'basic_needs_gap': -0.02, ...}
+    """
+    try:
+        return activity.apply(hh, budget_scale=budget_scale, return_effect_only=True)
+    except TypeError as e:
+        raise RuntimeError(
+            "Activity.apply(...) must accept return_effect_only=True and return a dict "
+            "of per‑variable effects WITHOUT mutating households (MODE A). "
+            "Please patch Activity.apply accordingly."
+        ) from e
+
+
+def apply_collinearity_propagation(hh, deltas):
+    """
+    After the nonlinear updates, propagate cross‑effects using the per‑household
+    realized deltas (element‑wise), then clip to [0,1].
+    This maintains your original collinearity semantics.
+    """
+    pairs = [
+        ('protection_risk', 'vulnerability',      COLLINEARITY_PR_VUL),
+        ('vulnerability',   'protection_risk',    COLLINEARITY_VUL_PR),
+        ('basic_needs_gap', 'morbidity',          COLLINEARITY_BNG_MOR),
+        ('morbidity',       'basic_needs_gap',    COLLINEARITY_MOR_BNG),
+        ('service_efficiency','education_access', COLLINEARITY_SE_EA),
+        ('education_access','service_efficiency', COLLINEARITY_EA_SE),
+        ('basic_needs_gap', 'vulnerability',      COLLINEARITY_BNG_VUL),
+        ('vulnerability',   'basic_needs_gap',    COLLINEARITY_VUL_BNG),
+    ]
+
+    for src, dst, coeff in pairs:
+        if coeff == 0.0: 
+            continue
+        src_delta = deltas.get(src, None)
+        if src_delta is None:
+            continue
+        dst_arr = getattr(hh, dst)
+        # Linear propagation on realized deltas; small coefficients recommended (0–0.3)
+        dst_arr[:] = np.clip(dst_arr + coeff * src_delta, 0.0, 1.0)
+
+# 5. Define "Synergy" Effects (Interactions).
+# These functions model how different aspects of a household's life affect each other.
+# Variables where higher is better
+INCREASING_VARS = {'education_access', 'service_efficiency'}
+
+def is_increasing(var_name: str) -> bool:
+    return var_name in INCREASING_VARS
+
+def helpful_delta(var_name: str, delta_arr: np.ndarray) -> np.ndarray:
+    """
+    Convert raw delta into 'helpful change' space:
+      - If higher is better → helpful = +delta
+      - If lower is better  → helpful = -delta  (since a decrease is helpful)
+    """
+    return delta_arr if is_increasing(var_name) else (-delta_arr)
+
+def raw_from_helpful(var_name: str, helpful_arr: np.ndarray) -> np.ndarray:
+    """
+    Convert helpful change back to raw orientation for the target variable:
+      - If higher is better → raw = helpful
+      - If lower is better  → raw = -helpful
+    """
+    return helpful_arr if is_increasing(var_name) else (-helpful_arr)
+
+# ---------------------------------------------
+# Synergy rules:
+# Each rule says: when BOTH sources improve (in 'helpful' terms),
+# produce an *extra helpful change* on the target.
+# coef controls strength; mode='help_only' ignores adverse (both-worse) cases.
+# ---------------------------------------------
+SYNERGY_RULES = [
+    # Basic needs gap ↓ AND service efficiency ↑  → extra ↓ in vulnerability
+    {'sources': ('basic_needs_gap', 'service_efficiency'), 'target': 'vulnerability',   'coef': 0.30, 'mode': 'help_only'},
+
+    # Education access ↑ AND service efficiency ↑ → extra ↓ in protection risk
+    {'sources': ('education_access', 'service_efficiency'), 'target': 'protection_risk','coef': 0.15, 'mode': 'help_only'},
+
+    # Basic needs gap ↓ AND protection risk ↓ → extra ↓ in morbidity
+    {'sources': ('basic_needs_gap', 'protection_risk'),     'target': 'morbidity',      'coef': 0.20, 'mode': 'help_only'},
+]
+
+# Global synergy cap per step (per household, per rule), keeps realism
+ABS_SYNERGY_CAP = 0.03
+
+def apply_synergy_effects(hh, base_deltas: dict):
+    """
+    Apply interaction (synergy) based on the *realized base deltas* this month
+    BEFORE collinearity propagation.
+
+    base_deltas: dict of {var_name: np.ndarray of per-household raw delta}
+    """
+    n = hh.n
+
+    for rule in SYNERGY_RULES:
+        s1, s2 = rule['sources']
+        tgt    = rule['target']
+        coef   = float(rule.get('coef', 0.0))
+        mode   = rule.get('mode', 'help_only')
+
+        if coef == 0.0:
+            continue
+        if s1 not in base_deltas or s2 not in base_deltas:
+            continue
+
+        d1_raw = base_deltas[s1]
+        d2_raw = base_deltas[s2]
+        if d1_raw is None or d2_raw is None:
+            continue
+
+        # Transform into helpful space for sources
+        h1 = helpful_delta(s1, d1_raw)
+        h2 = helpful_delta(s2, d2_raw)
+
+        # Synergy is product of helpful improvements
+        # (both must be > 0 for 'help_only' mode)
+        prod = h1 * h2
+        if mode == 'help_only':
+            prod = np.where((h1 > 0) & (h2 > 0), prod, 0.0)
+
+        extra_helpful = coef * prod
+        # Cap synergy magnitude
+        extra_helpful = np.clip(extra_helpful, -ABS_SYNERGY_CAP, ABS_SYNERGY_CAP)
+
+        # Convert back to raw delta for the target variable
+        extra_raw = raw_from_helpful(tgt, extra_helpful)
+
+        # Apply to target state and clip
+        tgt_arr = getattr(hh, tgt)
+        tgt_arr[:] = np.clip(tgt_arr + extra_raw, 0.0, 1.0)
+
+# 6. The "Simulate" function: the master loop that runs the virtual world.
+def simulate(env: Environment, activities: list, months: int = 6, budget_scale: float = 1.0):
+    """
+    Simulate with synergy:
+      0) record indicators
+      1) natural drift
+      2) collect non-mutating per-activity effects: {var: [(value, idx), ...]}
+      3) nonlinear + delayed update per var, applying each (value, idx)
+      4) compute base (realized) deltas
+      5) apply collinearity (uses realized deltas)
+      6) apply synergy (uses base deltas only)
+    """
+    timeline = []
+
+    for t in range(months + 1):
+        # record
+        timeline.append({**env.indicators(), 'month': t})
+        if t == months:
+            break
+
+        # natural drift
+        env.natural_drift()
+
+        # collect effects (value, idx) per variable
+        effects_by_var = {
+            'vulnerability':      [],
+            'protection_risk':    [],
+            'basic_needs_gap':    [],
+            'education_access':   [],
+            'morbidity':          [],
+            'service_efficiency': []
+        }
+        for a in activities:
+            eff = get_activity_effects(a, env.hh, budget_scale=budget_scale)  # returns {var: (val, idx)}
+            if not eff:
+                continue
+            for var, payload in eff.items():
+                if payload is None:
+                    continue
+                val, idx = payload
+                # validate idx array
+                if idx is None or len(idx) == 0:
+                    continue
+                effects_by_var[var].append((float(val), idx))
+
+        # Snapshot before activity application
+        prev = {
+            'vulnerability':      env.hh.vulnerability.copy(),
+            'protection_risk':    env.hh.protection_risk.copy(),
+            'basic_needs_gap':    env.hh.basic_needs_gap.copy(),
+            'education_access':   env.hh.education_access.copy(),
+            'morbidity':          env.hh.morbidity.copy(),
+            'service_efficiency': env.hh.service_efficiency.copy()
+        }
+
+        # nonlinear + delayed update
+        for var_name, batches in effects_by_var.items():
+            if not batches:
+                continue
+            arr = getattr(env.hh, var_name)
+
+            # Apply each activity's (value, idx) to its covered households
+            for effect_value, idx in batches:
+                if len(idx) == 0:
+                    continue
+                # Update ONLY covered indices
+                arr[idx] = [
+                    nonlinear_update_scalar(arr[i], effect_value, t, var_name)
+                    for i in idx
+                ]
+
+        # compute realized base deltas (post-nonlinear, pre-collinearity)
+        base_deltas = {
+            'vulnerability':      env.hh.vulnerability - prev['vulnerability'],
+            'protection_risk':    env.hh.protection_risk - prev['protection_risk'],
+            'basic_needs_gap':    env.hh.basic_needs_gap - prev['basic_needs_gap'],
+            'education_access':   env.hh.education_access - prev['education_access'],
+            'morbidity':          env.hh.morbidity - prev['morbidity'],
+            'service_efficiency': env.hh.service_efficiency - prev['service_efficiency']
+        }
+
+        # collinearity on realized deltas
+        apply_collinearity_propagation(env.hh, base_deltas)
+
+        # synergy on base deltas (pre-collinearity), adds second-order effects
+        apply_synergy_effects(env.hh, base_deltas)
+
+        # advance time
+        env.time += 1
+
+    return pd.DataFrame(timeline)
+
+# 7. The "Simulation Pipeline": runs every scenario multiple times for accuracy.
 metrics = [
     'Vulnerability (average effect)', 'Protection risk (average effect)', 'Basic needs gap (average effect)',
     'Education access (average effect)', 'Morbidity (average effect)', 'Service efficiency (average effect)'
@@ -1301,22 +1491,28 @@ for run_id in range(N_RUNS):
     child_ss = ss_run.spawn(len(all_effect_domains))
     rng_by_domain_run = {dom: default_rng(ss) for dom, ss in zip(all_effect_domains, child_ss)}
 
-    # build activities with per-run RNGs
+
+    # Build activities with per-run RNGs
     scen_built = []
     for name, acts, bscale in all_scenarios:
         built = [Activity(a.name, a.srf_domain, a.budget_share, coverage=a.coverage, intensity=a.intensity, rng=rng_by_domain_run.get(a.srf_domain, default_rng())) for a in acts]
         scen_built.append((name,built,bscale))
 
+
+    # ----- Run "No intervention" baseline -----
     env = Environment(clone_households(H_base), rng=rng_env)
     traj = simulate(env, [], MONTHS, 1.0)
     traj['scenario'] = 'No intervention'; traj['run'] = run_id; all_results.append(traj)
 
+    # ----- Run all other scenarios -----
     for name, acts, bscale in scen_built:
         if name=='No intervention': continue
         env = Environment(clone_households(H_base), rng=rng_env)
         traj = simulate(env, acts, MONTHS, budget_scale=bscale)
         traj['scenario'] = name; traj['run'] = run_id; all_results.append(traj)
 
+
+# 8. Aggregate and save the final results.
 results_df_ = pd.concat(all_results, ignore_index=True)
 
 agg = []
@@ -1328,7 +1524,11 @@ for (scenario, month), grp in results_df_.groupby(['scenario','month']):
     agg.append(row)
 results_df_agg = pd.DataFrame(agg)
 
-# Persist params/seeds
+
+# ============================================================
+# SAVE OUTPUTS - Persist params/seeds
+# ============================================================
+
 os.makedirs('outputs', exist_ok=True)
 repro = {
   'activity_id': ACTIVITY_ID,
@@ -1355,47 +1555,46 @@ print(f"Aggregated to {len(results_df_)} rows (mean ± 90% CI per scenario-month
 
 import matplotlib.cm as cm
 
+# 1. Prepare the visual styling for the time-series charts (colors and markers for each scenario).
 scenarios_ordered = results_df_['scenario'].unique().tolist()
 markers = ['o', 's', '^', 'D', 'v', 'p', '*', 'h', 'X', '+']
 marker_map = {s: markers[i % len(markers)] for i, s in enumerate(scenarios_ordered)}
 colors = plt.cm.get_cmap('tab20', len(scenarios_ordered))
 color_map = {s: colors(i) for i, s in enumerate(scenarios_ordered)}
 
-# ── 1. Time-series with confidence bands ──────────────────────────────────────
+# 2. Create the "Time-Series" charts: tracking household effects over the 12 virtual months.
 print("\n Tracking Household Effects Over the 12 Months")
 fig, axes = plt.subplots(len(metrics), 1, figsize=(8, 6 * len(metrics)))
 for i, m in enumerate(metrics):
     ax = axes[i]
-    # Collect final-point positions to resolve label overlap
-    end_points = []  # list of (y_value, label, color)
+    # Collect the final results to ensure labels on the right don't overlap.
+    end_points = []
     for label, df in results_df_agg.groupby('scenario'):
         df_s = df.sort_values('month')
+        # Plot the main line (the average result).
         ax.plot(df_s['month'], df_s[m],
                 marker=marker_map[label], label=label,
                 color=color_map[label], markersize=5, linewidth=2, alpha=0.9)
+        # Add a faint "shadow" (the 90% confidence band) to show the range of likely results.
         ax.fill_between(df_s['month'], df_s[f'{m}_lo'], df_s[f'{m}_hi'],
                         color=color_map[label], alpha=0.1)
         end_points.append((float(df_s[m].iloc[-1]), label, color_map[label]))
 
-    # Sort by y value and apply minimum gap to avoid overlap
+    # Stagger the labels on the right side of the chart for better readability.
     end_points.sort(key=lambda x: x[0])
-    MIN_GAP = 0.012  # minimum vertical gap between labels
+    MIN_GAP = 0.012
     adjusted_y = []
     for idx_ep, (y_raw, lbl, col) in enumerate(end_points):
         y_adj = y_raw
         for prev_y in adjusted_y:
-            if abs(y_adj - prev_y) < MIN_GAP:
-                y_adj = prev_y + MIN_GAP
+            if abs(y_adj - prev_y) < MIN_GAP: y_adj = prev_y + MIN_GAP
         adjusted_y.append(y_adj)
         last_x = MONTHS
-        # Draw a faint connector line from actual data point to staggered label
-        ax.plot([last_x, last_x + 0.3], [y_raw, y_adj],
-                color=col, linewidth=0.6, alpha=0.5)
-        ax.text(last_x + 0.35, y_adj, lbl,
-                color=col, fontweight='bold', va='center', fontsize=7.5,
+        ax.plot([last_x, last_x + 0.3], [y_raw, y_adj], color=col, linewidth=0.6, alpha=0.5)
+        ax.text(last_x + 0.35, y_adj, lbl, color=col, fontweight='bold', va='center', fontsize=7.5,
                 bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', pad=1))
         
-    # Simplify the title for non-technical audience
+    # Set the titles and labels using friendly, non-technical language.
     friendly_title = m.replace(' (average effect)', '').replace('Morbidity', 'Sickness')
     ax.set_title(friendly_title, fontsize=13, fontweight='bold', pad=12)
     ax.set_xlabel('Month')
@@ -1405,7 +1604,7 @@ for i, m in enumerate(metrics):
 plt.tight_layout(pad=2.0)
 plt.show()
 
-#  Heatmap vs. No Intervention ─────────────────────────────────────────
+# 3. Create the "Heatmap": a quick visual summary of which plan works best compared to "Doing Nothing".
 try:
     import seaborn as sns
 except Exception:
@@ -1414,13 +1613,12 @@ finals = results_df_agg[results_df_agg['month'] == results_df_agg['month'].max()
 baseline_row = finals[finals['scenario'] == 'No intervention']
 if not baseline_row.empty and sns is not None:
     base = baseline_row.iloc[0]
-    scenario_rows = []
-    row_labels = []
+    scenario_rows, row_labels = [], []
     for _, row in finals.iterrows():
-        if row['scenario'] == 'No intervention':
-            continue
+        if row['scenario'] == 'No intervention': continue
         diffs = []
         for m in metrics:
+            # Adjust the sign: improvement means the score goes UP for education, but DOWN for risk.
             sign = -1 if any(k in m.lower() for k in ['vulnerability', 'protection', 'needs', 'morbidity']) else +1
             diffs.append(sign * (row[m] - base[m]))
         scenario_rows.append(diffs)
@@ -1435,8 +1633,7 @@ if not baseline_row.empty and sns is not None:
         xticklabels=['Vulnerability', 'Protection', 'Basic Needs', 'Morbidity', 'Education', 'Services'],
         ax=ax
     )
-    ax.set_title('Improvement vs. Doing Nothing (More Positive/Green = Better)',
-                    fontsize=11, fontweight='bold', pad=15)
+    ax.set_title('Improvement vs. Doing Nothing (More Positive/Green = Better)', fontsize=11, fontweight='bold', pad=15)
     plt.tight_layout()
     plt.show()
 
@@ -1449,134 +1646,189 @@ if not baseline_row.empty and sns is not None:
 > After running all the tests, we want to see mathematically which plans were the most perfectly efficient. We use an economic tool to grade them.
 
 
-```{python}
-#| label: efficiency_assessment
-#| output: true
-
-# Build a lookup from scenario name → budget_scale
-scenario_budget_scale = {n: s for n, _, s in all_scenarios}
-scenario_budget_scale['No intervention'] = 0.0
-
-def efficiency_assessment_v2(finals_df, metrics, scenario_scales):
-    base_row = finals_df[finals_df['scenario'] == 'No intervention']
-    if base_row.empty:
-        return pd.DataFrame()
-    base = base_row.iloc[0]
-
-    results = []
-    for _, row in finals_df.iterrows():
-        s_name = row['scenario']
-        if s_name == 'No intervention':
-            continue
-        improvements = []
-        for m in metrics:
-            sign = -1 if any(k in m.lower() for k in ['vulnerability', 'protection', 'needs', 'morbidity']) else +1
-            imp = sign * (row[m] - base[m])
-            improvements.append(max(0.0, imp))
-
-        total_imp = sum(improvements)
-        bscale = scenario_scales.get(s_name, 1.0)
-        eff = total_imp / bscale if bscale > 0 else 0.0
-        results.append({
-            'Scenario':           s_name,
-            'Budget Scale':       f"{int(bscale * 100)}%",
-            'Budget (relative)':  bscale,
-            'Total Improvement':  round(total_imp, 5),
-            'Improvement/Budget': round(eff, 5),
-        })
-
-    eff_df = pd.DataFrame(results)
-    if not eff_df.empty:
-        max_eff = eff_df['Improvement/Budget'].max()
-        eff_df['Relative Efficiency'] = (eff_df['Improvement/Budget'] / max_eff).round(4) if max_eff > 0 else 0
-        eff_df = eff_df.sort_values('Relative Efficiency', ascending=False).reset_index(drop=True)
-    return eff_df
-
-print("[ Scenario Performance & Efficiency Assessment ]")
-eff_comparison = efficiency_assessment_v2(finals, metrics, scenario_budget_scale)
-display(eff_comparison.drop(columns=['Budget (relative)']))
-
-```
-
 
 ::: {.callout-tip}
 ### Explanation: Reading the Results
 
-We test efficiency in two ways:
-* **The "Perfect Math" Score (CCR/CRS)**: This assumes that if you double the money, you get exactly double the results. 
-* **The "Real World" Score (BCC/VRS)**: This is more realistic. It knows that throwing unlimited money at a problem has diminishing returns (eventually, spending more supports less).
+**Overall Improvement Score**  
+Shows the total positive change a plan delivers across all outcomes.  
+Higher = better overall results.
 
-**"Score" (1.00 is perfect)**: If a plan scores a pure 1.00 (marked with a ✅), it means there is absolutely no way to get better results without spending more money. This plan is perfectly efficient. If a plan scores lower than 1.00, it means a different spending plan could have supported more people for the same exact cost by rearranging where the money went. 
+**Improvement per Budget Unit**  
+All plans use the same total budget.  
+So this score simply reflects how much total improvement each plan delivers.  
+Higher = more “value for results.”
 
-The table below ranks the plans from most efficient to least.
+**Noise‑Adjusted Efficiency Score**  
+Shows whether a plan makes *better use of the same budget* compared with the others (i.e. well-balanced and non‑wasteful a plan is compared with all other plans).  
+A score close to **1.0** means no other plan achieves clearly better results across all outcomes.
+
+**Likely Range**  
+Shows the realistic uncertainty around the efficiency score.  
+A narrow range = more reliable performance.
+
+**Improvement per Budget Unit**  
+All plans use the same total budget.  
+So this score simply reflects how much total piled improvement each plan delivers but does not balance optimised improvements across effects.  
+Higher = more “value for results.”
+
+**How to choose between plans:**  
+Plans are ranked first by **Noise‑Adjusted Efficiency** (best use of the budget).  
+If two plans have similar efficiency, choose the one with the higher **Improvement per Budget**.
 :::
 
 ```{python}
-#| label: dea
+#| label: efficiency_summary
 #| output: true
+
+# This analysis identifies which budget plans are the most "efficient"—meaning 
+# they deliver the best possible results for the amount of money spent.
+
 from scipy.optimize import linprog
+import numpy as np
+import pandas as pd
+
+# ============================================================
+# COMBINED EFFICIENCY ANALYSIS
+# - Includes BOTH DEA (noise-adjusted efficiency)
+# - AND simple improvement-per-budget (v2)
+# - Produces ONE unified non-technical table
+# ============================================================
 
 finals = results_df_agg[results_df_agg['month']==results_df_agg['month'].max()].copy()
-base = finals[finals['scenario']=='No intervention'].iloc[0]
-name_to_scale = {n:s for n,_,s in all_scenarios}
+base  = finals[finals['scenario']=='No intervention'].iloc[0]
 
-# Build outputs (>=0) and single input (budget scale)
+# ------------------------------------------------------------
+# 1. Prepare outcome improvements for each scenario
+# ------------------------------------------------------------
 scenarios, Yrows, Xrows = [], [], []
-for _,row in finals.iterrows():
-    sname=row['scenario']
-    if sname=='No intervention': continue
-    outs=[]
-    for m in metrics:
-        sign=-1 if any(k in m.lower() for k in ['vulnerability','protection','needs','morbidity']) else +1
-        outs.append(max(0.0, sign*(row[m]-base[m])))
-    Yrows.append(outs); Xrows.append([max(1e-6, name_to_scale.get(sname,1.0))]); scenarios.append(sname)
-Y=np.array(Yrows); X=np.array(Xrows)
 
-# CCR input-oriented
-CCR_rows=[]
-for o in range(len(scenarios)):
-    n=len(scenarios); s=Y.shape[1]
+for _, row in finals.iterrows():
+    sname = row['scenario']
+    if sname == 'No intervention':
+        continue
+
+    improvements = []
+    for m in metrics:
+        sign = -1 if any(k in m.lower() for k in ['vulnerability','protection','needs','morbidity']) else 1
+        imp = max(0.0, sign*(row[m] - base[m]))
+        improvements.append(imp)
+
+    Yrows.append(improvements)
+    Xrows.append([1.0])      # All scenarios use the SAME total budget
+    scenarios.append(sname)
+
+Y = np.array(Yrows)
+X = np.array(Xrows)
+n, s = Y.shape
+
+# 3. Define the DEA Scorer: a mathematical tool that finds the "Efficiency Frontier".
+# It identifies which plans give the absolute best results for the budget spent.
+def dea_score(Y, X, o):
     c=np.zeros(n+1); c[-1]=1.0
     A=[]; b=[]
-    # input
-    row=np.zeros(n+1); row[:n]=X[:,0]; row[-1]=-X[o,0]; A.append(row); b.append(0.0)
-    # outputs
-    for r in range(s):
-        row=np.zeros(n+1); row[:n]=-Y[:,r]; A.append(row); b.append(-Y[o,r])
-    bounds=[(0,None)]*n+[(0,1)]
-    res=linprog(c, A_ub=np.array(A), b_ub=np.array(b), bounds=bounds, method='highs')
-    theta=res.x[-1] if res.success else np.nan
-    CCR_rows.append({'Scenario': scenarios[o], 'Perfect Math Score': theta, 'Efficient? (Math)': '✅' if (res.success and theta>=0.999) else ('LP fail' if not res.success else '—')})
 
-if DEA_VRS:
-    BCC_rows=[]
-    for o in range(len(scenarios)):
-        n=len(scenarios); s=Y.shape[1]
-        c=np.zeros(n+1); c[-1]=1.0
-        A=[]; b=[]
-        # input <= theta*x0
-        row=np.zeros(n+1); row[:n]=X[:,0]; row[-1]=-X[o,0]; A.append(row); b.append(0.0)
-        # outputs >= y0  -> -sum lam y <= -y0
-        for r in range(s):
-            row=np.zeros(n+1); row[:n]=-Y[:,r]; A.append(row); b.append(-Y[o,r])
-        # VRS: sum lambda = 1
-        Aeq=np.ones((1,n+1)); Aeq[0,-1]=0.0; beq=np.array([1.0])
-        bounds=[(0,None)]*n+[(0,1)]
-        res=linprog(c, A_ub=np.array(A), b_ub=np.array(b), A_eq=Aeq, b_eq=beq, bounds=bounds, method='highs')
-        theta=res.x[-1] if res.success else np.nan
-        BCC_rows.append({'Scenario': scenarios[o], 'Real World Score': theta, 'Efficient? (World)': '✅' if (res.success and theta>=0.999) else ('LP fail' if not res.success else '—')})
-        
-    ccr_df = pd.DataFrame(CCR_rows)
-    bcc_df = pd.DataFrame(BCC_rows)
-    combo_df = pd.merge(ccr_df, bcc_df, on='Scenario')
-    combo_df = combo_df.sort_values(by='Perfect Math Score', ascending=False).reset_index(drop=True)
-    
-    print("Combined Efficiency Rankings (1.0 = Max Value For Money):")
-    display(combo_df.style.format({'Perfect Math Score': '{:.3f}', 'Real World Score': '{:.3f}'}))
-else:
-    ccr_df = pd.DataFrame(CCR_rows).sort_values(by='Perfect Math Score', ascending=False).reset_index(drop=True)
-    print("Efficiency Rankings:")
-    display(ccr_df.style.format({'Perfect Math Score': '{:.3f}'}))
+    # Input constraint
+    row=np.zeros(n+1); row[:n]=X[:,0]; row[-1]=-X[o,0]
+    A.append(row); b.append(0.0)
+
+    # Output constraints
+    for r in range(s):
+        row=np.zeros(n+1); row[:n]=-Y[:,r]
+        A.append(row); b.append(-Y[o,r])
+
+    bounds=[(0,None)]*n + [(0,1)]
+    res = linprog(c, A_ub=np.array(A), b_ub=np.array(b), bounds=bounds, method='highs')
+    if not res.success:
+        return np.nan
+    return float(res.x[-1])
+
+# 4. Use "Bootstrapping" to adjust for noise.
+# We run the math hundreds of times with slightly different data to get a "Noise-Adjusted" score.
+def bootstrap_efficiency(Y, X, o, B=300, seed=42):
+    rng = np.random.default_rng(seed)
+
+    original = dea_score(Y, X, o)
+    if np.isnan(original):
+        return np.nan, np.nan, np.nan
+
+    boots=[]
+    for _ in range(B):
+        idx = rng.integers(0, n, n)
+        Yb,Yx = Y[idx], X[idx]
+        val = dea_score(Yb, Yx, o)
+        if not np.isnan(val): boots.append(val)
+
+    if not boots:
+        return original, np.nan, np.nan
+
+    boots=np.array(boots)
+    bias = boots.mean()-original
+    corrected = original - bias
+
+    return corrected, float(np.percentile(boots,5)), float(np.percentile(boots,95))
+
+# 5. Calculate a simple "Total Improvement" score for each plan.
+def total_improvement(row):
+    tot=0.0
+    for m in metrics:
+        sign=-1 if any(k in m.lower() for k in ['vulnerability','protection','needs','morbidity']) else 1
+        tot += max(0.0, sign*(row[m]-base[m]))
+    return float(tot)
+
+simple_scores = { 
+    row['scenario']: total_improvement(row) 
+    for _,row in finals.iterrows() if row['scenario']!="No intervention"
+}
+
+
+# 6. Build the final summary table, ranking the plans from most to least efficient.
+rows=[]
+for i, sname in enumerate(scenarios):
+    corrected, lo, hi = bootstrap_efficiency(Y, X, i)
+    ti = simple_scores.get(sname, 0.0)
+
+    # Non-technical interpretation
+    if np.isnan(corrected):
+        interp = "Could not evaluate efficiency."
+    elif corrected >= 0.90:
+        interp = "Excellent conversion of budget into results."
+    elif corrected >= 0.75:
+        interp = "Good use of resources."
+    elif corrected >= 0.55:
+        interp = "Moderate efficiency."
+    else:
+        interp = "Limited results for the same budget."
+
+    rows.append({
+        "Scenario": sname,
+        "Noise-Adjusted Efficiency Score": round(corrected,3),
+        "Likely Range (uncertainty)": f"{lo:.3f} – {hi:.3f}",
+        "Overall Improvement per Budget Unit": round(ti,4),   
+        "Interpretation": interp
+    })
+
+
+
+eff_combined_df = (
+    pd.DataFrame(rows)
+    .sort_values(
+        by=["Noise-Adjusted Efficiency Score", "Overall Improvement per Budget Unit"],
+        ascending=[False, False]
+    )
+    .reset_index(drop=True)
+)
+
+
+print("\n📊 **Combined Efficiency Summary**")
+display(
+    eff_combined_df.style.format({
+        "Overall Improvement per Budget Unit": "{:.4f}",
+        "Noise-Adjusted Efficiency Score": "{:.3f}"
+    })
+)
+
+
 ```
 
 
@@ -1584,7 +1836,7 @@ else:
 
 ## Step 6: Doing More With Less
 
-> How small can we shrink the budget and *still* provide the exact same level of overall support to the people as our Current Plan? 
+> A plan can be efficient and still operate with more budget than necessary. So how small can we shrink the budget and *still* provide the exact same level of overall support to the people as our Current Plan? 
 
 ::: {.callout-tip}
 ### How the Optimization Works
@@ -1592,147 +1844,235 @@ else:
 2.  **Mixing and Matching**: The computer doesn't just pick one of the previous scenarios. Instead, it creates a custom "Optimized Blend". It takes the smartest individual budget ideas (allocations to specific outcome areas) from all the "What-If" plans designed above.
 3.  **Shrinking the Budget**: The computer repeatedly simulates this Optimized Blend, slowly shrinking the total budget. It stops shrinking the budget the exact moment it can no longer hit our benchmark "Target Score". 
 4.  **The Result**: We discover the absolute lowest budget (`b*`) needed to achieve the exact same level of support as our current, more expensive plan.
+5.  **Comparison**: “Δ " shows how the Optimized plan compares to the Current plan. For indicators where “lower is better” (like vulnerability or morbidity), the sign is automatically flipped.
 :::
-
 ```{python}
 #| label: budget_min
 #| output: true
 
+# This part of the analysis finds the absolute "Lowest Budget" needed to match 
+# the overall support provided by the current, more expensive plan.
+
+from functools import lru_cache
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from numpy.random import SeedSequence, default_rng
+import numpy as np
+import pandas as pd
+import json
+
+# print("⚡ Optimized Budget Minimisation Running...")
+# 1. Define the Goal: we first calculate the total "support" generated by the Current Plan.
+# This becomes our benchmark "Target Score" that the optimized plan must hit.
 finals_full = results_df_agg[results_df_agg['month']==results_df_agg['month'].max()].copy()
+
 base_row = finals_full[finals_full['scenario']=='No intervention'].iloc[0]
-cur_row  = finals_full[finals_full['scenario']=='Current']
+current_row = finals_full[finals_full['scenario']=='Current']
 
 def total_improvement(row):
-    tot=0.0
+    tot = 0.0
     for m in metrics:
-        sign=-1 if any(k in m.lower() for k in ['vulnerability','protection','needs','morbidity']) else +1
+        sign = -1 if any(k in m.lower() for k in ['vulnerability','protection','needs','morbidity']) else +1
         tot += max(0.0, sign*(row[m]-base_row[m]))
     return float(tot)
 
-target_imp = total_improvement(cur_row.iloc[0]) if not cur_row.empty else None
-print(f"Target (Current full $) total improvement: {target_imp:.5f}")
+target_imp = total_improvement(current_row.iloc[0])
+# print(f"🎯 Target improvement (Current full $): {target_imp:.5f}")
 
 candidate_oas = []
 for code, info in SRF_MAP.items():
     if info['level']!='OA': continue
-    label=f"{code} - {info['domain']}"
-    if SRF_EFFECT_LIBRARY.get(label, {}): candidate_oas.append(code)
-assert candidate_oas, "No OA effects available to optimize over."
+    label = f"{code} - {info['domain']}"
+    if SRF_EFFECT_LIBRARY.get(label, {}):
+        candidate_oas.append(code)
 
-from numpy.random import SeedSequence, default_rng
+assert candidate_oas, "No OA effects available for optimization."
 
 
+# ============================================================
+# BUILDING ACTIVITIES FROM OAs
+# ============================================================
 def build_activities_from_weights(weights: dict):
+    """Convert OA weights into an activity portfolio."""
+    # take top 8 weighted OAs
     items = sorted(weights.items(), key=lambda x: x[1], reverse=True)[:8]
     items = {k:(v if v>0 else 0.0) for k,v in items}
     s = sum(items.values())
-    if s<=0: return []
+    if s <= 0:
+        return []
     norm = {k: v/s for k,v in items.items()}
     return make_targeted_portfolio(norm)
 
+# 2. Mixing and Matching: the computer repeatedly simulates different "Optimized Blends" 
+# of budget ideas to find the smartest possible combination.
+@lru_cache(maxsize=50000)
+def evaluate_portfolio_cached(weights_json: str, budget_scale: float, n_runs_opt: int):
+    """Memoized wrapper so repeated evaluations don't re-run ABM."""
+    weights = json.loads(weights_json)
 
-def evaluate_portfolio(weights: dict, budget_scale: float, n_runs_opt: int=N_RUNS, seed_offset:int=50):
     acts = build_activities_from_weights(weights)
     if not acts:
-        return -1.0, (np.nan, np.nan), None
+        return -1.0, (np.nan, np.nan), acts
+
     run_totals = []
     for run_id in range(n_runs_opt):
-        ss_run = SeedSequence(BASE_SEED + seed_offset + run_id)
+        ss_run = SeedSequence(BASE_SEED + 3000 + run_id + int(budget_scale*1000))
         rng_env = default_rng(ss_run.spawn(1)[0])
         child_ss = ss_run.spawn(len(all_effect_domains))
         rng_by_domain_run = {dom: default_rng(ss) for dom, ss in zip(all_effect_domains, child_ss)}
-        acts_run = [Activity(a.name, a.srf_domain, a.budget_share, coverage=a.coverage, intensity=a.intensity, rng=rng_by_domain_run.get(a.srf_domain, default_rng())) for a in acts]
+
+        acts_run = [
+            Activity(a.name, a.srf_domain, a.budget_share, coverage=a.coverage, 
+                     intensity=a.intensity, rng=rng_by_domain_run.get(a.srf_domain, default_rng()))
+            for a in acts
+        ]
+
         env = Environment(clone_households(H_base), rng=rng_env)
         traj = simulate(env, acts_run, MONTHS, budget_scale=budget_scale)
         final = traj.iloc[-1]
+
         tot=0.0
         for m in metrics:
-            sign=-1 if any(k in m.lower() for k in ['vulnerability','protection','needs','morbidity']) else +1
-            tot += max(0.0, sign*(final[m]-base_row[m]))
+            sign = -1 if any(k in m.lower() for k in ['vulnerability','protection','needs','morbidity']) else +1
+            tot += max(0.0, sign*(final[m] - base_row[m]))
         run_totals.append(tot)
+
     run_totals = np.array(run_totals)
     return float(run_totals.mean()), (float(np.percentile(run_totals,5)), float(np.percentile(run_totals,95))), acts
 
 
-def optimize_portfolio_for_budget(budget_scale: float, iters:int=300, seed:int=123):
+def evaluate_portfolio(weights: dict, budget_scale: float, n_runs_opt: int):
+    """Serialize for cache."""
+    w_json = json.dumps(weights, sort_keys=True)
+    return evaluate_portfolio_cached(w_json, budget_scale, n_runs_opt)
+
+
+# ============================================================
+# FAST OPTIMIZATION USING RANDOM + ELITE + LOCAL MUTATION
+# ============================================================
+def optimize_portfolio_for_budget(budget_scale: float, iters: int=150, seed: int=123):
     rng = np.random.default_rng(seed)
+
+    # initial seeds from existing scenarios
     seeds = []
     for name, acts, _ in all_scenarios:
-        if name in ['No intervention']: continue
+        if name == 'No intervention': 
+            continue
         w = {}
         for a in acts:
             code = a.srf_domain.split(' - ')[0]
             if code in candidate_oas:
-                w[code] = w.get(code, 0.0) + a.budget_share
-        if w: seeds.append(w)
-    equal_w = {c:1.0/len(candidate_oas) for c in candidate_oas}
-    seeds.append(equal_w)
+                w[code] = w.get(code,0) + a.budget_share
+        if w:
+            seeds.append(w)
 
-    best_mean=-1.0; best_ci=(np.nan,np.nan); best_w=None; best_acts=None
-    for w in seeds:
-        m, ci, acts = evaluate_portfolio(w, budget_scale, n_runs_opt=4, seed_offset=100)
-        if m>best_mean:
-            best_mean, best_ci, best_w, best_acts = m, ci, w, acts
+    # uniform equal allocation
+    seeds.append({c:1.0/len(candidate_oas) for c in candidate_oas})
+
+    # Evaluate seed candidates in parallel
+    best_mean = -1.0
+    best_ci = (np.nan, np.nan)
+    best_w = None
+    best_acts = None
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = [
+            pool.submit(evaluate_portfolio, w, budget_scale, 2)
+            for w in seeds
+        ]
+        for w, fut in zip(seeds, futures):
+            m, ci, acts = fut.result()
+            if m > best_mean:
+                best_mean, best_ci, best_w, best_acts = m, ci, w, acts
+
+    # Randomised + Mutated Search
     for t in range(iters):
         vec = rng.dirichlet(np.ones(len(candidate_oas)))
         w = {c: float(v) for c,v in zip(candidate_oas, vec)}
+
+        # Drop tiny weights (<4%)
         w = {k:(v if v>=0.04 else 0.0) for k,v in w.items()}
-        s=sum(w.values());
-        if s<=0: continue
-        w = {k: v/s for k,v in w.items()}
-        m, ci, acts = evaluate_portfolio(w, budget_scale, n_runs_opt=3, seed_offset=200+t)
-        if m>best_mean:
+        s = sum(w.values())
+        if s <= 0:
+            continue
+        w = {k:v/s for k,v in w.items()}
+
+        m, ci, acts = evaluate_portfolio(w, budget_scale, 1)
+
+        if m > best_mean:
             best_mean, best_ci, best_w, best_acts = m, ci, w, acts
+
+        # Early stopping (we already reach target)
+        if best_mean >= 0.99*target_imp:
+            break
+
     return best_mean, best_ci, best_w, best_acts
 
-coarse_grid = list(np.round(np.concatenate([np.array([1.0]), np.arange(0.9, 0.49, -0.05)]),2))
-feasible=[]
-for b in coarse_grid:
-    mean_imp, ci_imp, w, acts = optimize_portfolio_for_budget(b, iters=50, seed=int(1000*b))
-    feasible.append({'b': b, 'mean_imp': mean_imp, 'ci5': ci_imp[0], 'ci95': ci_imp[1], 'weights': w, 'acts': acts})
-    print(f"b={b:.2f}: best mean={mean_imp:.5f} (target {target_imp:.5f})")
+# 3. Shrinking the Budget: the computer tests the optimized blend at lower and lower 
+# budget levels until it can no longer hit our "Target Score".
+coarse_grid = [1.0] + list(np.round(np.arange(0.9,0.49,-0.05),2))
+feasible = []
 
-good=[r for r in feasible if r['mean_imp'] >= 0.99*target_imp]
+#print("\n🔍 Coarse grid search…")
+for b in coarse_grid:
+    mean_imp, ci_imp, w, acts = optimize_portfolio_for_budget(b, iters=40, seed=int(1000*b))
+    feasible.append({'b':b, 'mean_imp':mean_imp, 'ci5':ci_imp[0], 'ci95':ci_imp[1], 'weights':w, 'acts':acts})
+    print(f"  b={b:.2f} → mean={mean_imp:.5f}  (target {target_imp:.5f})")
+
+good = [r for r in feasible if r['mean_imp'] >= 0.99 * target_imp]
+
 if not good:
-    print("No budget reduction found — increase iterations or OA set.")
-    b_star=None; best_record=None
+    print("❌ No budget reduction found. Try increasing iterations.")
+    b_star=None
+    best_record=None
 else:
-    b_low = min([r['b'] for r in good])
+    b_low = min(r['b'] for r in good)
     below = [r for r in feasible if r['b'] < b_low and r['mean_imp'] < 0.99*target_imp]
-    b_high_bad = max([r['b'] for r in below]) if below else b_low - 0.05
+    b_high_bad = max((r['b'] for r in below), default=b_low-0.05)
     b_left, b_right = b_high_bad, b_low
-    best_record = [r for r in feasible if r['b']==b_low][0]
+
+    best_record = next(r for r in feasible if r['b']==b_low)
+
+    #print("\n🔍 Bisection refinement…")
     for _ in range(8):
-        if b_right - b_left < 0.01: break
+        if b_right - b_left < 0.01:
+            break
         b_mid = round((b_left + b_right)/2, 3)
-        mean_imp, ci_imp, w, acts = optimize_portfolio_for_budget(b_mid, iters=60, seed=777)
-       # print(f"b={b_mid:.3f}: mean={mean_imp:.5f}")
-        if mean_imp >= 0.99*target_imp:
-            b_right = b_mid; best_record = {'b': b_mid, 'mean_imp': mean_imp, 'ci5': ci_imp[0], 'ci95': ci_imp[1], 'weights': w, 'acts': acts}
+        mean_imp, ci_imp, w, acts = optimize_portfolio_for_budget(b_mid, iters=20, seed=777)
+
+        if mean_imp >= 0.99 * target_imp:
+            best_record = {'b':b_mid, 'mean_imp':mean_imp,
+                           'ci5':ci_imp[0], 'ci95':ci_imp[1],
+                           'weights':w, 'acts':acts}
+            b_right = b_mid
         else:
             b_left = b_mid
-    b_star = round(best_record['b'], 3)
 
-# Update reproducibility file with budget-min settings
+    b_star = round(best_record['b'], 3)
+   # print(f"\n✅ Minimal budget scale found: b* = {b_star:.3f}")
+
+# ============================================================
+# Update reproducibility file
+# ============================================================
 try:
-    repro_extra = {'budget_min': {'grid': coarse_grid, 'b_star': b_star, 'iters_grid': 50, 'iters_bisect': 60}}
     repro_path = f'outputs/repro_report_{ACTIVITY_ID}.json'
     data = json.load(open(repro_path)) if os.path.exists(repro_path) else {}
-    data.update(repro_extra)
+    data.update({'budget_min': {
+        'grid': coarse_grid,
+        'b_star': b_star,
+        'iters_grid': 40,
+        'iters_bisect': 20
+    }})
     json.dump(data, open(repro_path,'w'), indent=2)
 except Exception as e:
-    print(f"Repro write failed: {e}")
+    print("Repro write failed:", e)
+
+#print("\n--- Budget Minimisation Completed ---")
 
 if b_star is not None:
     red_pct = round((1.0 - b_star)*100, 1)
    # print(f"✅ Minimal budget scale to match Current (full $): b* = {b_star:.3f}  (reduction ≈ {red_pct}%)")
-```
 
-
-
-```{python}
-#| label: report_onepager
-#| output: true
+# 4. The Result: we display the "Minimal Budget" found and compare it to the current plan.
 if 'b_star' in globals() and b_star is not None and best_record:
     # Build final metrics for Current (full $) and Optimized at b*
     def simulate_weights(weights, budget_scale, n_runs=10, seed_offset=5000):
@@ -1834,78 +2174,190 @@ else:
 
 We test these "shocks" to verify that our winning budget plans are still the best, even if the real world is tougher than the simulation.
 
+
+::: {.callout-tip}
+###  Reading the chart:
+- **Total effect (ST)** shows the *overall* importance of a parameter, including interactions with other parameters.
+- **Direct effect (S1)** shows the importance *on its own*, holding others fixed.
+- If **ST >> S1**, it means the parameter mainly matters through *interactions* (e.g., combined with other parameters).
+- Focus risk management or calibration effort on parameters with the *largest ST*.
+::: 
 ```{python}
 #| label: sensitivity
 #| output: true
 
-# We quantify how sensitive the total improvement (for 'Current') is to ±20% changes
-# in the drift means and the effect scale multiplier.
+# This is the "Stress Test". We test how our results change if the world gets 
+# 20% tougher (drift) or if our programs are 20% less effective (effects).
 
-SENS_RUNS = 20
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from numpy.random import SeedSequence, default_rng
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Helper that runs one scenario with modified knobs
+# ================
+# 0) Parameters
+# ================
+SENS_RUNS = 6           # Monte Carlo runs per evaluation (keep modest for speed)
+BASE_SEED_SENS = BASE_SEED + 9000
+BUDGET_SCALE_SENS = 1.0  # we test "Current" at full budget
 
-def run_scenario_with_knobs(scenario_name='Current', effect_scale_mult=1.0, drift_mults=None, budget_scale=1.0, n_runs=SENS_RUNS, seed_offset=9000):
+# Bounds for the global study
+PARAM_NAMES = [
+    "effect_scale",
+    "drift_vulnerability", "drift_protection", "drift_basic",
+    "drift_morbidity", "drift_education", "drift_service"
+]
+PARAM_BOUNDS = [
+    [0.8, 1.2],  # effect_scale
+    [0.8, 1.2],  # vul
+    [0.8, 1.2],  # protection
+    [0.8, 1.2],  # basic needs
+    [0.8, 1.2],  # morbidity
+    [0.8, 1.2],  # education
+    [0.8, 1.2],  # service
+]
+
+# Helper: compute "total improvement" for a given final row (already in your notebook)
+def _total_improvement_from_row(row, base_row, metrics):
+    tot=0.0
+    for m in metrics:
+        sign = -1 if any(k in m.lower() for k in ['vulnerability','protection','needs','morbidity']) else +1
+        tot += max(0.0, sign*(row[m]-base_row[m]))
+    return float(tot)
+
+# Helper: evaluate "Current" with specific knobs
+def _run_current_with_knobs(effect_scale_mult=1.0, drift_mults=None, n_runs=SENS_RUNS, seed_offset=0):
+    # We temporarily adjust the global EFFECT_SCALE_MULT inside this call
     global EFFECT_SCALE_MULT
+    orig = EFFECT_SCALE_MULT
     EFFECT_SCALE_MULT = effect_scale_mult
-    acts = [a for n, A, s in all_scenarios if n==scenario_name for a in A]
-    totals=[]
-    for run_id in range(n_runs):
-        ss_run = SeedSequence(BASE_SEED + seed_offset + run_id)
-        rng_env = default_rng(ss_run.spawn(1)[0])
-        child_ss = ss_run.spawn(len(all_effect_domains))
-        rng_by_domain_run = {dom: default_rng(ss) for dom, ss in zip(all_effect_domains, child_ss)}
-        acts_run = [Activity(a.name, a.srf_domain, a.budget_share, coverage=a.coverage, intensity=a.intensity, rng=rng_by_domain_run.get(a.srf_domain, default_rng())) for a in acts]
-        env = Environment(clone_households(H_base), rng=rng_env, drift_mults=drift_mults)
-        traj = simulate(env, acts_run, MONTHS, budget_scale=budget_scale)
-        final = traj.iloc[-1]
-        # total direction-adjusted improvement vs baseline
-        tot=0.0
-        for m in metrics:
-            sign=-1 if any(k in m.lower() for k in ['vulnerability','protection','needs','morbidity']) else +1
-            tot += max(0.0, sign*(final[m]-base_row[m]))
-        totals.append(tot)
-    EFFECT_SCALE_MULT = 1.0
-    return float(np.mean(totals))
+    try:
+        acts = [a for n, A, s in all_scenarios if n=='Current' for a in A]
+        totals=[]
+        for run_id in range(n_runs):
+            ss_run = SeedSequence(BASE_SEED_SENS + seed_offset + run_id)
+            rng_env = default_rng(ss_run.spawn(1)[0])
+            child_ss = ss_run.spawn(len(all_effect_domains))
+            rng_by_domain_run = {dom: default_rng(ss) for dom, ss in zip(all_effect_domains, child_ss)}
+            acts_run = [Activity(a.name, a.srf_domain, a.budget_share, coverage=a.coverage, intensity=a.intensity, rng=rng_by_domain_run.get(a.srf_domain, default_rng())) for a in acts]
+            env = Environment(clone_households(H_base), rng=rng_env, drift_mults=drift_mults)
+            traj = simulate(env, acts_run, MONTHS, budget_scale=BUDGET_SCALE_SENS)
+            final = traj.iloc[-1]
+            totals.append(_total_improvement_from_row(final, base_row, metrics))
+        return float(np.mean(totals))
+    finally:
+        EFFECT_SCALE_MULT = orig
 
-# Baseline total improvement for Current
-baseline_total = total_improvement(cur_row.iloc[0])
+# Baseline
+finals_full = results_df_agg[results_df_agg['month']==results_df_agg['month'].max()].copy()
+base_row = finals_full[finals_full['scenario']=='No intervention'].iloc[0]
+cur_row  = finals_full[finals_full['scenario']=='Current']
+baseline_total = _total_improvement_from_row(cur_row.iloc[0], base_row, metrics)
 
-records=[]
-# Effect scale ±20%
-for f in [0.8, 1.0, 1.2]:
-    val = run_scenario_with_knobs('Current', effect_scale_mult=f)
-    records.append({'Factor': f'Effect scale ×{f}', 'Total': val, 'Δ vs base': val-baseline_total})
+# 1. Global Stress Test: we analyze how every parameter (like effectiveness and 
+# natural decline) contributes to the final result.
+try:
+    from SALib.sample import saltelli
+    from SALib.analyze import sobol
+    #print("🔬 Running global sensitivity (Sobol)…")
 
-# Drift multipliers (each dimension ±20%, OAT)
-keys = [('vulnerability','Vulnerability'), ('protection','Protection risk'), ('basic','Basic needs gap'), ('morbidity','Morbidity'), ('education','Education access'), ('service','Service efficiency')]
-for key, label in keys:
-    for f in [0.8, 1.2]:
-        mults = {k:1.0 for k,_ in keys}
-        mults[key]=f
-        val = run_scenario_with_knobs('Current', drift_mults=mults)
-        records.append({'Factor': f'Drift {label} ×{f}', 'Total': val, 'Δ vs base': val-baseline_total})
+    problem = {
+        "num_vars": len(PARAM_NAMES),
+        "names": PARAM_NAMES,
+        "bounds": PARAM_BOUNDS
+    }
 
-sens_df = pd.DataFrame(records)
+    # Sample design (Saltelli). Start small (e.g., 256) then scale (512/1024) as needed.
+    N_SAMPLES = 256
+    X = saltelli.sample(problem, N_SAMPLES, calc_second_order=False)
 
-# Create a visual representation (horizontal bar chart) instead of a table
-fig, ax = plt.subplots(figsize=(8, 6))
-# Sort values for a better looking tornado/bar chart
-sens_df_sorted = sens_df.sort_values('Δ vs base', ascending=True)
+    # Map each sample to an evaluation of total improvement
+    def _eval_row(x, idx):
+        # x order: [effect_scale, drift_vul, drift_prot, drift_basic, drift_morb, drift_edu, drift_serv]
+        effect_scale = float(x[0])
+        drift_mults = {
+            'vulnerability': float(x[1]),
+            'protection':    float(x[2]),
+            'basic':         float(x[3]),
+            'morbidity':     float(x[4]),
+            'education':     float(x[5]),
+            'service':       float(x[6])
+        }
+        return _run_current_with_knobs(effect_scale_mult=effect_scale, drift_mults=drift_mults, n_runs=SENS_RUNS, seed_offset=10000+idx)
 
-# Separate positive and negative for coloring
-colors = ['#e74c3c' if x < 0 else '#27ae60' for x in sens_df_sorted['Δ vs base']]
+    # Parallel evaluation
+    Y = np.zeros(len(X), dtype=float)
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = {pool.submit(_eval_row, X[i], i): i for i in range(len(X))}
+        for fut in as_completed(futures):
+            i = futures[fut]
+            Y[i] = fut.result()
 
-bars = ax.barh(sens_df_sorted['Factor'], sens_df_sorted['Δ vs base'], color=colors)
-ax.axvline(0, color='black', linewidth=1)
+    # Analyze Sobol indices
+    Si = sobol.analyze(problem, Y, calc_second_order=False, print_to_console=False)
 
-ax.set_title("Sensitivity Test: How Shocks Affect Overall Results", fontsize=13, fontweight='bold', pad=15)
-ax.set_xlabel("Change in Overall Help (vs. Baseline)")
-ax.set_ylabel("Simulated Shock (Factor)")
-ax.grid(axis='x', alpha=0.3, linestyle='--')
+    # Build results table
+    sobol_df = pd.DataFrame({
+        'Parameter': PARAM_NAMES,
+        'First-order (S1)': Si['S1'],
+        'S1 conf.': Si['S1_conf'],
+        'Total-order (ST)': Si['ST'],
+        'ST conf.': Si['ST_conf']
+    }).sort_values('Total-order (ST)', ascending=False).reset_index(drop=True)
 
-plt.tight_layout()
-plt.show()
+    # Plot: total-order and first-order indices
+    plt.figure(figsize=(9,6))
+    y = np.arange(len(sobol_df))
+    plt.barh(y+0.15, sobol_df['Total-order (ST)'], height=0.3, color='#1f77b4', label='Total effect (ST)')
+    plt.barh(y-0.15, sobol_df['First-order (S1)'], height=0.3, color='#2ca02c', label='Direct effect (S1)')
+    plt.gca().set_yticks(y)
+    plt.gca().set_yticklabels(sobol_df['Parameter'])
+    plt.axvline(0, color='black', lw=1)
+    plt.title("Global Sensitivity (Sobol): Contribution of Each Parameter", fontsize=13, fontweight='bold')
+    plt.xlabel("Sensitivity index (0–1)")
+    plt.legend()
+    plt.grid(axis='x', alpha=0.3, linestyle='--')
+    plt.tight_layout()
+    plt.show()
+
+    display(sobol_df.style.format({'First-order (S1)':'{:.3f}','S1 conf.':'{:.3f}','Total-order (ST)':'{:.3f}','ST conf.':'{:.3f}'}))
+
+
+
+except Exception as e:
+    # 2. Simplified Stress Test (Fallback): we test specific ±20% "shocks" one by one 
+    # to see how they impact the total improvement.
+    print("⚠️ SALib not available; running local OAT tornado instead.\n(Install with: pip install SALib)")
+    # Effect scale ±20%
+    records=[]
+    for f in [0.8, 1.0, 1.2]:
+        val = _run_current_with_knobs(effect_scale_mult=f, drift_mults=None, n_runs=SENS_RUNS, seed_offset=0)
+        records.append({'Factor': f'Effect scale ×{f}', 'Total': val, 'Δ vs base': val-baseline_total})
+
+    # Drift multipliers (each dimension ±20%, OAT)
+    keys = [('vulnerability','Vulnerability'), ('protection','Protection risk'), ('basic','Basic needs gap'), ('morbidity','Morbidity'), ('education','Education access'), ('service','Service efficiency')]
+    for key, label in keys:
+        for f in [0.8, 1.2]:
+            mults = {k:1.0 for k,_ in keys}
+            mults[key]=f
+            val = _run_current_with_knobs(effect_scale_mult=1.0, drift_mults=mults, n_runs=SENS_RUNS, seed_offset=100)
+            records.append({'Factor': f'Drift {label} ×{f}', 'Total': val, 'Δ vs base': val-baseline_total})
+
+    sens_df = pd.DataFrame(records)
+
+    # Tornado chart
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sens_df_sorted = sens_df.sort_values('Δ vs base', ascending=True)
+    colors = ['#e74c3c' if x < 0 else '#27ae60' for x in sens_df_sorted['Δ vs base']]
+    ax.barh(sens_df_sorted['Factor'], sens_df_sorted['Δ vs base'], color=colors)
+    ax.axvline(0, color='black', linewidth=1)
+    ax.set_title("Sensitivity (OAT): How ±20% Shocks Affect Total Improvement", fontsize=13, fontweight='bold', pad=15)
+    ax.set_xlabel("Change in Overall Help (vs. Baseline)")
+    ax.set_ylabel("Factor shocked")
+    ax.grid(axis='x', alpha=0.3, linestyle='--')
+    plt.tight_layout()
+    plt.show()
 ```
 
 # Conclusion
@@ -1930,7 +2382,7 @@ plt.show()
 
 ## Future Work
 
-- **Expand Data Sources**: We could expand our analysis to include other data sources, such as UNHCR's internal monitoring data, to further improve our results.
+- **Expand Data Sources**: We could expand our analysis to include other data sources, such as UNHCR's household survey data, to further improve the agent-based model part.
 
 - **Enhance Model Complexity**: We could enhance the complexity of our agent-based model to include more factors, such as the impact of different types of interventions, to further improve our results.
 

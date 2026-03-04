@@ -30,7 +30,7 @@
     25,
     26
   ],
-  "timestamp": "2026-03-03T18:27:35.851786",
+  "timestamp": "2026-03-04T16:51:41.974504",
   "budget_min": {
     "grid": [
       1.0,
@@ -45,7 +45,7 @@
       0.5
     ],
     "b_star": 0.456,
-    "iters_grid": 50,
-    "iters_bisect": 60
+    "iters_grid": 40,
+    "iters_bisect": 20
   }
 }

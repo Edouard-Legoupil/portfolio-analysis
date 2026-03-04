@@ -24,5 +24,8 @@ networkx
 scikit-learn
 scipy
 statsmodels 
+pytensor
+pymc
+SALib
 
-
+functools
